@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>SiPy Web Editor</title>
+    <style>
+        body { background: #1e1e1e; color: #fff; font-family: Consolas, monospace; margin: 0; }
+        #editor { width: 100%; height: 60vh; background: #252526; color: #fff; padding: 10px; font-size: 16px; border: none; outline: none; }
+        #output { width: 100%; height: 25vh; background: #111; color: #0f0; padding: 10px; overflow-y: auto; white-space: pre-wrap; }
+        #runBtn { width: 100%; padding: 10px; background: #007acc; border: none; color: white; font-size: 18px; cursor: pointer; }
+        #runBtn:hover { background: #005a9e; }
+    </style>
+</head>
+<body>
+
+<textarea id="editor">a = integer(10)
+b = integer(20)
+c = a.add(b)
+loop(3, writeln(c))</textarea>
+
+<button id="runBtn">Run</button>
+
+<pre id="output"></pre>
+
+<!-- Hier wird die SiPy-Engine geladen -->
+<script src="sipy.js"></script>
+
+<script>
+    document.getElementById("runBtn").onclick = () => {
+        clearOutput();
+        const code = document.getElementById("editor").value;
+
+        try {
+            runSiPy(code);
+        } catch (e) {
+            writeln("Fehler: " + e.message);
+        }
+    };
+</script>
+
+</body>
+</html>
