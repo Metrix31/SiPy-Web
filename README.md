@@ -4,14 +4,21 @@ Open Source programming language.
 
 
 example codes:
+
+1
+
 a = integer(10)
+
 b = integer(20)
+
 c = a.add(b)
 
 loop(1, "writelm(c)")
 
+2
 
 a = integer(10)
+
 b = integer(20)
 
 ifcase(a.eq(b), "writeln('a equals b')", "writeln('a does not equal b')")
