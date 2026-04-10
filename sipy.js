@@ -1,10 +1,15 @@
-// --- SiPy Runtime (neue Version) ---
+// ===============================
+// SiPy Runtime (JavaScript)
+// ===============================
 
 class Basic {
     constructor(value) {
         this.value = value;
     }
 
+    // -----------------------------
+    // Typ-Konvertierung
+    // -----------------------------
     static toBasic(x) {
         return x instanceof Basic ? x : new Basic(x);
     }
@@ -14,13 +19,18 @@ class Basic {
     static string(v)  { return new Basic(String(v)); }
     static boolean(v) { return new Basic(Boolean(v)); }
 
+    // -----------------------------
+    // Operatoren
+    // -----------------------------
     add(other) { return new Basic(this.value + Basic.toBasic(other).value); }
     sub(other) { return new Basic(this.value - Basic.toBasic(other).value); }
     mul(other) { return new Basic(this.value * Basic.toBasic(other).value); }
     div(other) { return new Basic(this.value / Basic.toBasic(other).value); }
     mod(other) { return new Basic(this.value % Basic.toBasic(other).value); }
 
+    // -----------------------------
     // Vergleichsoperatoren
+    // -----------------------------
     eq(other)  { return this.value == Basic.toBasic(other).value; }
     neq(other) { return this.value != Basic.toBasic(other).value; }
     gt(other)  { return this.value >  Basic.toBasic(other).value; }
@@ -28,15 +38,24 @@ class Basic {
     ge(other)  { return this.value >= Basic.toBasic(other).value; }
     le(other)  { return this.value <= Basic.toBasic(other).value; }
 
+    // -----------------------------
+    // Pi
+    // -----------------------------
     static pi() { return new Basic(3.1415926); }
 }
 
-function integer(v)  { return Basic.integer(v); }
-function floater(v)  { return Basic.floater(v); }
-function string(v)   { return Basic.string(v); }
-function boolean(v)  { return Basic.boolean(v); }
-function pi()        { return Basic.pi(); }
+// ===============================
+// Kurzbefehle
+// ===============================
+const integer = Basic.integer;
+const floater = Basic.floater;
+const string  = Basic.string;
+const boolean = Basic.boolean;
+const pi      = Basic.pi;
 
+// ===============================
+// Ausgabe
+// ===============================
 const outputEl = document.getElementById("output");
 
 function clearOutput() {
@@ -48,15 +67,27 @@ function writeln(x) {
     outputEl.textContent += x + "\n";
 }
 
-// --- verbesserter Loop: String oder Funktion ---
+// ===============================
+// Eingabe (getln)
+// ===============================
+function getln(promptText = "") {
+    let result = window.prompt(promptText);
+
+    if (result === null) result = "";
+
+    // Immer als Basic-String zurückgeben
+    return Basic.string(result);
+}
+
+// ===============================
+// Loop
+// ===============================
 function loop(count, action) {
     count = Basic.toBasic(count).value;
 
     if (typeof action === "string") {
         for (let i = 0; i < count; i++) {
-            with (vars) {
-                eval(action);
-            }
+            with (vars) eval(action);
         }
         return;
     }
@@ -71,7 +102,9 @@ function loop(count, action) {
     writeln("Fehler: loop() erwartet String oder Funktion");
 }
 
-// --- IF + ELSE ---
+// ===============================
+// IF + ELSE
+// ===============================
 function ifcase(condition, actionTrue, actionFalse = null) {
     if (condition instanceof Basic) {
         condition = condition.value;
@@ -94,6 +127,9 @@ function ifcase(condition, actionTrue, actionFalse = null) {
     }
 }
 
+// ===============================
+// Variablen + Interpreter
+// ===============================
 let vars = {};
 
 function runSiPy(code) {
