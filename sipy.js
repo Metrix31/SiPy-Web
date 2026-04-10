@@ -75,8 +75,7 @@ function getln(promptText = "") {
 
     if (result === null) result = "";
 
-    // Immer als Basic-String zurückgeben
-    return Basic.string(result);
+    return result;
 }
 
 // ===============================
