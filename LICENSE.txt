@@ -120,9 +120,6 @@
           that such additional attribution notices cannot be construed
           as modifying the License.
 
-        (e) You need to credit the owner of this Project. Just the name somewhere
-          accessable and readable.
-
       You may add Your own copyright statement to Your modifications and
       may provide additional or different license terms and conditions
       for use, reproduction, or distribution of Your modifications, or
