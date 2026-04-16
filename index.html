@@ -1,36 +1,42 @@
 <!DOCTYPE html>
-<html>
+<html lang="de">
 <head>
     <meta charset="UTF-8">
     <title>SiPy Web Editor</title>
+
+    <!-- Favicon -->
     <link rel="icon" href="favicon.ico" sizes="any">
+
+    <!-- Modernes SiPy CSS -->
     <link rel="stylesheet" href="style.css">
-    <style>
-        body { background: #1e1e1e; color: #fff; font-family: Consolas, monospace; margin: 0; }
-        #editor { width: 100%; height: 60vh; background: #252526; color: #fff; padding: 10px; font-size: 16px; border: none; outline: none; }
-        #output { width: 100%; height: 25vh; background: #111; color: #0f0; padding: 10px; overflow-y: auto; white-space: pre-wrap; }
-        #runBtn { width: 100%; padding: 10px; background: #007acc; border: none; color: white; font-size: 18px; cursor: pointer; }
-        #runBtn:hover { background: #005a9e; }
-    </style>
 </head>
+
 <body>
 
-<textarea id="editor">a = integer(10)
+<!-- Button-Leiste -->
+<div class="button-row">
+    <button id="runBtn">Run</button>
+    <button onclick="clearOutput()">Clear</button>
+</div>
+
+<!-- Editor -->
+<div id="editor">
+        <textarea id="code">a = integer(10)
 b = integer(20)
 c = a.add(b)
 loop(3, "writeln(c)")</textarea>
+</div>
 
-<button id="runBtn">Run</button>
+<!-- Output -->
+<div id="output"></div>
 
-<pre id="output"></pre>
-
-<!-- Hier wird die SiPy-Engine geladen -->
+<!-- SiPy Engine -->
 <script src="sipy.js"></script>
 
 <script>
     document.getElementById("runBtn").onclick = () => {
         clearOutput();
-        const code = document.getElementById("editor").value;
+        const code = document.getElementById("code").value;
 
         try {
             runSiPy(code);
