@@ -132,6 +132,7 @@ function ifcase(condition, actionTrue, actionFalse = null) {
 let vars = {};
 
 function runSiPy(code) {
+    vars = {};
     const lines = code.split("\n");
 
     for (let rawLine of lines) {
