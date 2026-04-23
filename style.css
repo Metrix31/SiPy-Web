@@ -114,7 +114,8 @@ textarea {
     right: 15px;
     display: flex;
     gap: 10px;
-    z-index: 9999;
+    z-index: 999999;
+    flex-shrink: 0;
 }
 
 .top-right-buttons a {
