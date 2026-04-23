@@ -126,10 +126,34 @@ function ifcase(condition, actionTrue, actionFalse = null) {
     }
 }
 
-// ===============================
-// Variablen + Interpreter
-// ===============================
+// ==================================
+// Variablen + Interpreter + Modules
+// ==================================
 let vars = {};
+
+function importModule(name) {
+    name = String(name);
+
+    if (!modules[name]) {
+        writeln("Fehler: Modul '" + name + "' not found");
+        return;
+    }
+
+    vars[name] = modules[name];
+}
+
+const modules = {
+    math: {
+        pi: Basic.pi(),
+        add: (a, b) => Basic.toBasic(a).value + Basic.toBasic(b).value,
+        sqrt: (x) => Math.sqrt(Basic.toBasic(x).value)
+    },
+
+    strings: {
+        upper: (s) => String(Basic.toBasic(s).value).toUpperCase(),
+        lower: (s) => String(Basic.toBasic(s).value).toLowerCase()
+    }
+};
 
 function runSiPy(code) {
     vars = {};
@@ -139,12 +163,22 @@ function runSiPy(code) {
         let line = rawLine.trim();
         if (line === "") continue;
 
+        // --- IMPORT ---
+        if (line.startsWith("import(")) {
+            let modName = line.substring(7, line.length - 1).trim().replace(/["']/g, "");
+            importModule(modName);
+            continue;
+        }
+
+        // --- Zuweisung ---
         if (line.includes("=")) {
             let [name, expr] = line.split("=").map(s => s.trim());
             with (vars) {
                 vars[name] = eval(expr);
             }
-        } else {
+        }
+
+        else {
             with (vars) {
                 eval(line);
             }
