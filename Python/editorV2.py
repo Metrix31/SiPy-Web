@@ -41,7 +41,7 @@ class SiPyEditor(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("SiPy Editor (Qt Version)")
+        self.setWindowTitle("SiPy Editor")
         self.resize(900, 700)
 
         # ---- Editor ----
@@ -54,18 +54,24 @@ class SiPyEditor(QMainWindow):
         self.output.setStyleSheet("background-color: #111; color: #0f0;")
         self.output.setFont(QFont("Consolas", 11))
 
-        # ---- Run Button ----
+        # ---- Buttons ----
         self.run_button = QPushButton("Run")
-        self.run_button.clicked.connect(self.run_sipy)
+        self.run_button.clicked.connect(self.runSiPy)
+
+        self.clear_button = QPushButton("Clear Output")
+        self.clear_button.clicked.connect(self.clearOutput)
 
         # ---- Layout ----
-        layout = QVBoxLayout()
-        layout.addWidget(self.editor)
-        layout.addWidget(self.run_button)
-        layout.addWidget(self.output)
+        button_row = QVBoxLayout()
+        button_row.addWidget(self.run_button)
+        button_row.addWidget(self.clear_button)
+
+        button_row.addWidget(self.editor)
+        button_row.addLayout(button_row)
+        button_row.addWidget(self.output)
 
         container = QWidget()
-        container.setLayout(layout)
+        container.setLayout(button_row)
         self.setCentralWidget(container)
 
         # ---- Menü ----
@@ -88,23 +94,45 @@ class SiPyEditor(QMainWindow):
         sys.stdout = OutputRedirector(self.output)
         sys.stderr = OutputRedirector(self.output)
 
+    def clearOutput(self):
+        self.output.clear()
+
     # ---------------------------------------------------------
     # SiPy Code ausführen
     # ---------------------------------------------------------
-    def run_sipy(self):
+    def runSiPy(self):
         code = self.editor.toPlainText()
-        self.output.clear()
 
-        # eigener Namespace für SiPy
-        sipy_env = {}
+        vars = {}
+        lines = code.split("\n")
 
-        # Interpreter-Funktionen hineinladen
-        sipy_env.update(globals())
+        for rawLine in lines:
+            line = rawLine.strip()
+            if line == "":
+                continue
 
-        try:
-            exec(code, sipy_env)
-        except Exception as e:
-            print(f"Fehler: {e}")
+            # --- IMPORT ---
+            if line.startswith("import(") and line.endswith(")"):
+                modName = line[7:-1].strip().replace('"', "").replace("'", "")
+                import_module(modName, vars)
+                continue
+
+            # --- Zuweisung ---
+            if "=" in line:
+                name, expr = map(str.strip, line.split("=", 1))
+                result = eval(expr, sipy_globals, vars)
+
+                # Wenn Ergebnis eine Funktion ist -> ausführen
+                if callable(result):
+                    result()
+
+                vars[name] = result
+            else:
+                result = eval(line, sipy_globals, vars)
+
+                # Wenn Ergebnis eine Funktion ist -> ausführen
+                if callable(result):
+                    result()
 
     # ---------------------------------------------------------
     # Datei öffnen
