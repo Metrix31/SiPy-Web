@@ -138,7 +138,15 @@
 
     <div class="section">
         <h2>Was ist SiPy?</h2>
-        <p>SiPy ist eine einfache, moderne Programmiersprache, die du direkt im Browser ausführen kannst. Sie basiert auf JavaScript, hat aber eine Python‑ähnliche Syntax.</p>
+        <p>
+            SiPy ist eine einfache, moderne Programmiersprache, die du direkt im Browser ausführen kannst.
+            Sie basiert auf JavaScript, besitzt aber auch eine vollständige
+            <strong>Python‑Version</strong> sowie einen
+            <strong>lokalen SiPy‑Editor für Windows</strong>, die beide auf der GitHub‑Seite verfügbar sind.
+            <br><br>
+            SiPy unterstützt Variablen, Eingaben, Schleifen, Bedingungen und seit kurzem auch
+            <strong>Module über import("…")</strong>.
+        </p>
     </div>
 
     <div class="section">
@@ -173,6 +181,33 @@ ifcase(a.eq(integer(10)), "writeln('a ist 10')", "writeln('a ist nicht 10')")
             </pre>
     </div>
 
+    <div class="section">
+        <h2>Neue Funktionen in SiPy</h2>
+
+        <h3>📦 Module importieren</h3>
+        <p>SiPy unterstützt jetzt Module, die mit <code>import("name")</code> geladen werden.</p>
+        <pre>
+import("math")
+import("strings")
+    </pre>
+
+        <h3>🧮 Math‑Modul</h3>
+        <pre>
+import("math")
+writeln(math.pi())
+writeln(math.sqrt(16))
+writeln(math.add(10, 20))
+    </pre>
+
+        <h3>🔤 Strings‑Modul</h3>
+        <pre>
+import("strings")
+writeln(strings.upper("hallo"))
+writeln(strings.lower("HALLO"))
+writeln(strings.contains("abc", "b"))
+    </pre>
+    </div>
+
 </div>
 
 <!-- English Tutorial -->
@@ -182,7 +217,15 @@ ifcase(a.eq(integer(10)), "writeln('a ist 10')", "writeln('a ist nicht 10')")
 
     <div class="section">
         <h2>What is SiPy?</h2>
-        <p>SiPy is a simple, modern programming language you can run directly in your browser. It is based on JavaScript but has a Python‑like syntax.</p>
+        <p>
+            SiPy is a simple, modern programming language that runs directly in your browser.
+            It is based on JavaScript, but also has a full
+            <strong>Python version</strong> and a
+            <strong>local SiPy Editor for Windows</strong>, both available on the GitHub page.
+            <br><br>
+            SiPy supports variables, input, loops, conditions, and now also
+            <strong>modules via import("...")</strong>.
+        </p>
     </div>
 
     <div class="section">
@@ -215,6 +258,32 @@ loop(3, "writeln('Hello World')")
         <pre>
 ifcase(a.eq(integer(10)), "writeln('a is 10')", "writeln('a is not 10')")
             </pre>
+    </div>
+    <div class="section">
+        <h2>New Features in SiPy</h2>
+
+        <h3>📦 Importing Modules</h3>
+        <p>SiPy now supports modules that can be loaded using <code>import("name")</code>.</p>
+        <pre>
+import("math")
+import("strings")
+    </pre>
+
+        <h3>🧮 Math Module</h3>
+        <pre>
+import("math")
+writeln(math.pi())
+writeln(math.sqrt(16))
+writeln(math.add(10, 20))
+    </pre>
+
+        <h3>🔤 Strings Module</h3>
+        <pre>
+import("strings")
+writeln(strings.upper("hello"))
+writeln(strings.lower("HELLO"))
+writeln(strings.contains("abc", "b"))
+    </pre>
     </div>
 
 </div>
