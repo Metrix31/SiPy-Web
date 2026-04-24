@@ -140,6 +140,15 @@ class Basic:
     def pi(self):
         return Basic(3.1415926 * self)
 
+def import_module(name, vars):
+    name = str(name)
+
+    if name not in modules:
+        print(f"Fehler: Modul '{name}' existiert nicht")
+        return
+
+    vars[name] = modules[name]
+
 # -----------------------------
 # Kurzbefehle
 # -----------------------------
@@ -158,3 +167,55 @@ mod = Basic.mod
 ifcase = Basic.ifcase
 getln = Basic.getln
 #made by Metrix31
+
+sipy_globals = {
+    "Basic": Basic,
+    "integer": integer,
+    "floater": floater,
+    "string": string,
+    "boolean": boolean,
+    "writeln": writeln,
+    "loop": loop,
+    "ifcase": ifcase,
+    "getln": getln,
+    "import_module": import_module
+}
+
+class SiPyMath:
+    @staticmethod
+    def pi():
+        return Basic(3.1415926)
+
+    @staticmethod
+    def add(a, b):
+        a = Basic.to_basic(a).value
+        b = Basic.to_basic(b).value
+        return Basic(a + b)
+
+    @staticmethod
+    def sqrt(x):
+        x = Basic.to_basic(x).value
+        return Basic(x ** 0.5)
+
+
+class SiPyStrings:
+    @staticmethod
+    def upper(s):
+        s = str(Basic.to_basic(s).value)
+        return Basic(s.upper())
+
+    @staticmethod
+    def lower(s):
+        s = str(Basic.to_basic(s).value)
+        return Basic(s.lower())
+
+    @staticmethod
+    def contains(s, sub):
+        s = str(Basic.to_basic(s).value)
+        sub = str(Basic.to_basic(sub).value)
+        return Basic(sub in s)
+
+modules = {
+    "math": SiPyMath,
+    "strings": SiPyStrings
+}
