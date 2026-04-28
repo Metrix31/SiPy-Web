@@ -64,6 +64,8 @@ button:hover {
     padding: 16px;
     margin: 0 20px 20px 20px;
 
+    -webkit-user-modify: read-write-plaintext-only;
+
     /* WICHTIG: Container scrollt NICHT */
     overflow: visible;
     height: auto;

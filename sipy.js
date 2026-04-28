@@ -163,6 +163,15 @@ function runSiPy(code) {
         let line = rawLine.trim();
         if (line === "") continue;
 
+        // Kommentare ignorieren
+        if (line.startsWith("#")) continue;
+
+        // Inline-Kommentare entfernen
+        if (line.includes("#")) {
+            line = line.split("#")[0].trim();
+            if (line === "") continue;
+        }
+
         // --- IMPORT ---
         if (line.startsWith("import(")) {
             let modName = line.substring(7, line.length - 1).trim().replace(/["']/g, "");
