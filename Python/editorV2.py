@@ -111,6 +111,15 @@ class SiPyEditor(QMainWindow):
             if line == "":
                 continue
 
+            # Kommentare ignorieren
+            if line.startswith("#"):
+                continue
+
+            if "#" in line:
+                line = line.split("#", 1)[0].strip()
+                if line == "":
+                    continue
+
             # --- IMPORT ---
             if line.startswith("import(") and line.endswith(")"):
                 modName = line[7:-1].strip().replace('"', "").replace("'", "")
