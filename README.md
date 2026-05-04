@@ -13,7 +13,7 @@ b = integer(20)
 
 c = a.add(b)
 
-loop(1, "writelm(c)")
+loop(1, "writeln(c)")
 
 2
 
