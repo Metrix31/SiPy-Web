@@ -2,54 +2,152 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SiPy Web Editor</title>
-
-    <!-- Favicon -->
     <link rel="icon" href="favicon.ico" sizes="any">
-
-    <!-- Modernes SiPy CSS -->
     <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
+<header class="app-header">
+    <div>
+        <h1>SiPy Web Editor</h1>
+    </div>
 
-<!-- Button-Leiste -->
-<div class="button-row">
-    <button id="runBtn">Run</button>
-    <button onclick="clearOutput()">Clear</button>
-</div>
+    <nav class="top-links" aria-label="Projektlinks">
+        <a href="tutorial.html">Tutorial</a>
+        <a href="https://github.com/Metrix31/SiPy-Web" target="_blank" rel="noreferrer">GitHub</a>
+    </nav>
+</header>
 
-<div class="top-right-buttons">
-    <a href="tutorial.html">Tutorial</a>
-    <a href="https://github.com/Metrix31/SiPy-Web" target="_blank">GitHub</a>
-</div>
+<main class="workspace">
+    <section class="panel editor-panel" aria-labelledby="editorTitle">
+        <div class="panel-header">
+            <div>
+                <h2 id="editorTitle">Editor</h2>
+                <p id="editorMeta">5 Zeilen</p>
+            </div>
 
-<!-- Editor -->
-<div id="editor"><textarea id="code" contenteditable="true" spellcheck="false" autocomplete="off" autocapitalize="off">a = integer(10)
+            <div class="button-row">
+                <button id="runBtn" class="primary-btn" type="button">Run</button>
+                <button id="clearBtn" type="button">Clear</button>
+                <button id="sampleBtn" type="button">Beispiel</button>
+                <button id="copyBtn" type="button">Copy</button>
+            </div>
+        </div>
+
+        <div id="editor">
+            <div id="lineNumbers" aria-hidden="true">1</div>
+            <textarea id="code" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="SiPy Code">a = integer(10)
 b = integer(20)
 c = a.add(b)
 loop(3, "writeln(c)")
 loop(3, "writeln('Hallo')")</textarea>
-</div>
+        </div>
+    </section>
 
-<!-- Output -->
-<div id="output"></div>
+    <section class="panel output-panel" aria-labelledby="outputTitle">
+        <div class="panel-header">
+            <div>
+                <h2 id="outputTitle">Output</h2>
+                <p id="statusText">Bereit</p>
+            </div>
+        </div>
 
-<!-- SiPy Engine -->
+        <div id="output" role="log" aria-live="polite"></div>
+    </section>
+</main>
+
 <script src="sipy.js"></script>
-
 <script>
-    document.getElementById("runBtn").onclick = () => {
+    const codeEl = document.getElementById("code");
+    const runBtn = document.getElementById("runBtn");
+    const clearBtn = document.getElementById("clearBtn");
+    const sampleBtn = document.getElementById("sampleBtn");
+    const copyBtn = document.getElementById("copyBtn");
+    const statusText = document.getElementById("statusText");
+    const editorMeta = document.getElementById("editorMeta");
+    const lineNumbers = document.getElementById("lineNumbers");
+    const savedCode = localStorage.getItem("sipy-code");
+
+    const sampleCode = `r = integer(9)
+writeln("Wurzel:")
+writeln(math.sqrt(r))
+ifcase(r.gt(5), "writeln('größer als 5')", "writeln('kleiner als 5')")`;
+
+    function updateEditorMeta() {
+        const lineCount = codeEl.value.split("\n").length;
+        editorMeta.textContent = lineCount + (lineCount === 1 ? " Zeile" : " Zeilen");
+        lineNumbers.textContent = Array.from({ length: lineCount }, (_, index) => index + 1).join("\n");
+        localStorage.setItem("sipy-code", codeEl.value);
+    }
+
+    function setStatus(text, mode = "") {
+        statusText.textContent = text;
+        statusText.dataset.mode = mode;
+    }
+
+    function runCode() {
         clearOutput();
-        const code = document.getElementById("code").value;
+        setStatus("Läuft...", "running");
 
         try {
-            runSiPy(code);
+            const result = runSiPy(codeEl.value);
+            setStatus(result.executedLines + " Zeilen ausgeführt", "ok");
         } catch (e) {
             writeln("Fehler: " + e.message);
+            setStatus("Fehler", "error");
+        }
+    }
+
+    runBtn.onclick = runCode;
+    clearBtn.onclick = () => {
+        clearOutput();
+        setStatus("Bereit");
+    };
+
+    sampleBtn.onclick = () => {
+        codeEl.value = sampleCode;
+        updateEditorMeta();
+        codeEl.focus();
+    };
+
+    copyBtn.onclick = async () => {
+        try {
+            await navigator.clipboard.writeText(codeEl.value);
+            setStatus("Code kopiert", "ok");
+        } catch (error) {
+            codeEl.select();
+            document.execCommand("copy");
+            setStatus("Code kopiert", "ok");
         }
     };
-</script>
 
+    codeEl.addEventListener("input", updateEditorMeta);
+    codeEl.addEventListener("scroll", () => {
+        lineNumbers.scrollTop = codeEl.scrollTop;
+    });
+    codeEl.addEventListener("keydown", (event) => {
+        if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+            event.preventDefault();
+            runCode();
+        }
+
+        if (event.key === "Tab") {
+            event.preventDefault();
+            const start = codeEl.selectionStart;
+            const end = codeEl.selectionEnd;
+            codeEl.value = codeEl.value.substring(0, start) + "    " + codeEl.value.substring(end);
+            codeEl.selectionStart = codeEl.selectionEnd = start + 4;
+            updateEditorMeta();
+        }
+    });
+
+    if (savedCode) {
+        codeEl.value = savedCode;
+    }
+
+    updateEditorMeta();
+</script>
 </body>
 </html>

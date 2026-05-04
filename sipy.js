@@ -126,22 +126,6 @@ function ifcase(condition, actionTrue, actionFalse = null) {
     }
 }
 
-// ==================================
-// Variablen + Interpreter + Modules
-// ==================================
-let vars = {};
-
-function importModule(name) {
-    name = String(name);
-
-    if (!modules[name]) {
-        writeln("Fehler: Modul '" + name + "' not found");
-        return;
-    }
-
-    vars[name] = modules[name];
-}
-
 const modules = {
     math: {
         pi: Basic.pi(),
@@ -155,11 +139,36 @@ const modules = {
     }
 };
 
-function runSiPy(code) {
-    vars = {};
-    const lines = code.split("\n");
+// ==================================
+// Variablen + Interpreter + Module
+// ==================================
+let vars = {};
 
-    for (let rawLine of lines) {
+function createDefaultVars() {
+    return {
+        math: modules.math,
+        strings: modules.strings
+    };
+}
+
+function importModule(name) {
+    name = String(name);
+
+    if (!modules[name]) {
+        writeln("Fehler: Modul '" + name + "' nicht gefunden");
+        return;
+    }
+
+    vars[name] = modules[name];
+}
+
+function runSiPy(code) {
+    vars = createDefaultVars();
+    const lines = code.split("\n");
+    let executedLines = 0;
+
+    for (let index = 0; index < lines.length; index++) {
+        let rawLine = lines[index];
         let line = rawLine.trim();
         if (line === "") continue;
 
@@ -176,21 +185,34 @@ function runSiPy(code) {
         if (line.startsWith("import(")) {
             let modName = line.substring(7, line.length - 1).trim().replace(/["']/g, "");
             importModule(modName);
+            executedLines++;
             continue;
         }
 
-        // --- Zuweisung ---
-        if (line.includes("=")) {
-            let [name, expr] = line.split("=").map(s => s.trim());
-            with (vars) {
-                vars[name] = eval(expr);
-            }
-        }
+        try {
+            const assignment = line.match(/^([\p{L}_$][\p{L}\p{N}_$]*)\s*=\s*(.+)$/u);
 
-        else {
-            with (vars) {
-                eval(line);
+            // --- Zuweisung ---
+            if (assignment) {
+                const name = assignment[1];
+                const expr = assignment[2];
+
+                with (vars) {
+                    vars[name] = eval(expr);
+                }
             }
+
+            else {
+                with (vars) {
+                    eval(line);
+                }
+            }
+
+            executedLines++;
+        } catch (error) {
+            throw new Error("Zeile " + (index + 1) + ": " + error.message);
         }
     }
+
+    return { executedLines };
 }
