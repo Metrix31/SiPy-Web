@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>SiPy Web Editor</title>
+
+    <!-- Favicon -->
+    <link rel="icon" href="favicon.ico" sizes="any">
+
+    <!-- Modernes SiPy CSS -->
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<!-- Button-Leiste -->
+<div class="button-row">
+    <button id="runBtn">Run</button>
+    <button onclick="clearOutput()">Clear</button>
+</div>
+
+<div class="top-right-buttons">
+    <a href="tutorial.html">Tutorial</a>
+    <a href="https://github.com/Metrix31/SiPy-Web" target="_blank">GitHub</a>
+</div>
+
+<!-- Editor -->
+<div id="editor"><textarea id="code" contenteditable="true" spellcheck="false" autocomplete="off" autocapitalize="off">a = integer(10)
+b = integer(20)
+c = a.add(b)
+loop(3, "writeln(c)")
+loop(3, "writeln('Hallo')")</textarea>
+</div>
+
+<!-- Output -->
+<div id="output"></div>
+
+<!-- SiPy Engine -->
+<script src="sipy.js"></script>
+
+<script>
+    document.getElementById("runBtn").onclick = () => {
+        clearOutput();
+        const code = document.getElementById("code").value;
+
+        try {
+            runSiPy(code);
+        } catch (e) {
+            writeln("Fehler: " + e.message);
+        }
+    };
+</script>
+
+</body>
+</html>
