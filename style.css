@@ -226,6 +226,7 @@ pre {
 
 code {
     color: var(--accent-green);
+    -webkit-user-modify: read-write-plaintext-only;
 }
 
 textarea {

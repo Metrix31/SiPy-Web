@@ -149,5 +149,12 @@ ifcase(r.gt(5), "writeln('größer als 5')", "writeln('kleiner als 5')")`;
 
     updateEditorMeta();
 </script>
+<script>
+    codeEl.addEventListener("input", () => {
+        codeEl.value = codeEl.value
+            .replace(/„|“/g, '"')
+            .replace(/‚|‘|’/g, "'");
+    });
+</script>
 </body>
 </html>
