@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import filedialog
 import sys
-from basicSipy import *
+from Interpreter import *
 
 class OutputRedirector:
     def __init__(self, widget):
