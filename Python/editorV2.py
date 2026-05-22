@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtGui import QAction, QTextCursor, QFont
 from PySide6.QtCore import Qt
 
-from basicSipy import *
+from Interpreter import *
 
 def qt_getln(prompt_text=""):
     text, ok = QInputDialog.getText(None, "Eingabe", prompt_text)
