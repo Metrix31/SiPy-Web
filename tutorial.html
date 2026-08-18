@@ -25,11 +25,12 @@
     <nav class="tutorial-nav" aria-label="Tutorial Abschnitte">
         <a href="#start">Start</a>
         <a href="#typen">Typen</a>
-        <a href="#ausgabe">Ausgabe und Eingabe</a>
-        <a href="#operatoren">Operatoren</a>
-        <a href="#kontrolle">Schleifen und Bedingungen</a>
+        <a href="#ausgabe">Ausgabe</a>
+        <a href="#kontrolle">Kontrolle</a>
+        <a href="#collections">Collections</a>
+        <a href="#debugging">Debugging</a>
         <a href="#module">Module</a>
-        <a href="#beispiel">Komplettes Beispiel</a>
+        <a href="#beispiel">Beispiel</a>
     </nav>
 
     <div class="tutorial-content">
@@ -37,69 +38,110 @@
             <h2>Was ist SiPy?</h2>
             <p>
                 SiPy ist eine einfache Programmiersprache für kleine Programme direkt im Browser.
-                Du schreibst Code links im Editor, führst ihn mit Run oder Strg+Enter aus und siehst das Ergebnis rechts im Output.
+                Der Editor kompiliert Code in schnelle Statements, führt sie aus und zeigt Output, Warnungen und Speicherzustand an.
             </p>
         </section>
 
         <section id="typen" class="tutorial-section">
-            <h2>Variablen und Typen</h2>
-            <p>Variablen werden mit <code>=</code> gespeichert. Werte können als Zahl, Text oder Wahrheitswert angelegt werden.</p>
-            <pre><code>a = integer(10)
-b = floater(2.5)
-text = string("Hallo")
-aktiv = boolean(true)
-writeln(a)
-writeln(text)</code></pre>
+            <h2>Variablen, Konstanten und Kommentare</h2>
+            <p>Normale Variablen werden mit <code>=</code> gespeichert. <code>:=</code> schützt Werte vor späterer Neuzuweisung.</p>
+            <pre><code>/* mehrzeiliger
+Kommentar */
+name := string("SiPy")
+version = floater(2.0)
+aktiv = boolean(True)
+print(name)</code></pre>
         </section>
 
         <section id="ausgabe" class="tutorial-section">
-            <h2>Ausgabe und Eingabe</h2>
-            <p><code>writeln()</code> schreibt eine neue Zeile in den Output. <code>getln()</code> fragt eine Eingabe ab.</p>
-            <pre><code>name = string(getln("Wie heißt du?"))
-writeln("Hallo " + name.value)</code></pre>
-        </section>
-
-        <section id="operatoren" class="tutorial-section">
-            <h2>Rechnen und Vergleichen</h2>
-            <p>SiPy-Werte haben Methoden zum Rechnen und Vergleichen.</p>
+            <h2>Strings und Inline-Math</h2>
+            <p>Strings können Python-nahe f-Strings nutzen. <code>calc()</code> berechnet kurze Rechenausdrücke.</p>
             <pre><code>a = integer(10)
-b = integer(3)
-writeln(a.add(b))
-writeln(a.sub(b))
-writeln(a.mul(b))
-writeln(a.div(b))
-writeln(a.gt(b))</code></pre>
+b = integer(5)
+print(f"Summe: {a.add(b)}")
+print(calc("2 + 3 * 4"))
+print(f"Name: {name}")</code></pre>
         </section>
 
         <section id="kontrolle" class="tutorial-section">
-            <h2>Schleifen und Bedingungen</h2>
-            <p><code>loop()</code> wiederholt Code. <code>ifcase()</code> führt je nach Bedingung einen von zwei Befehlen aus.</p>
-            <pre><code>zahl = integer(7)
-loop(3, "writeln('Hallo')")
-ifcase(zahl.gt(5), "writeln('größer als 5')", "writeln('kleiner oder gleich 5')")</code></pre>
+            <h2>For, Switch und Try/Catch</h2>
+            <p>Blöcke werden wie in Python mit Doppelpunkt und Einrückung geschrieben. <code>for in range()</code>, <code>match/case</code> und <code>try/except</code> sind eingebaut.</p>
+            <pre><code>for i in range(0, 3):
+    print(f"Index {i}")
+
+match integer(2).value:
+    case 1:
+        print("eins")
+        break
+    case 2:
+        print("zwei")
+        break
+    default:
+        print("anderer Wert")
+
+try:
+    x := integer(1)
+    x = integer(2)
+except error:
+    print(f"Gefangen: {error.message}")</code></pre>
+        </section>
+
+        <section id="collections" class="tutorial-section">
+            <h2>Tuple, Set, Queue, Stack und Enum</h2>
+            <p>SiPy enthält unveränderliche Tupel, eindeutige Sets, FIFO-Queues, LIFO-Stacks und einfache Enums.</p>
+            <pre><code>paar = tuple("x", 10)
+werte = set("a", "b", "a")
+aufgaben = queue()
+stapel = stack()
+Status = enumType("Status", ["Offen", "Fertig"])
+
+aufgaben.enqueue("bauen")
+stapel.push("oben")
+print(paar)
+print(werte)
+print(aufgaben.dequeue())
+print(stapel.pop())
+print(Status.Fertig)</code></pre>
+        </section>
+
+        <section id="debugging" class="tutorial-section">
+            <h2>Debugging</h2>
+            <p>Klicke links auf eine Zeilennummer, um einen Breakpoint zu setzen. <code>Step</code> führt ein Statement aus und der Memory-Inspector zeigt Variablen an.</p>
+            <pre><code>a = integer(1)
+breakpoint()
+a = a.add(2)
+print(a)</code></pre>
         </section>
 
         <section id="module" class="tutorial-section">
             <h2>Module</h2>
-            <p>
-                Die Module <code>math</code> und <code>strings</code> sind normal eingebaut und sofort verfügbar.
-                <code>import("math")</code> und <code>import("strings")</code> funktionieren weiterhin, sind aber nicht nötig.
-            </p>
-            <pre><code>writeln(math.pi)
-writeln(math.sqrt(16))
-writeln(math.add(10, 20))
-writeln(strings.upper("hallo"))
-writeln(strings.lower("HALLO"))</code></pre>
+            <p>Die Module <code>math</code>, <code>strings</code>, <code>collections</code>, <code>random</code> und <code>time</code> sind direkt verfügbar.</p>
+            <pre><code>print(math.pi)
+print(math.sqrt(16))
+print(strings.upper("hallo"))
+print(random.int(1, 6))
+import("collections")
+print(collections.stack("a", "b"))</code></pre>
         </section>
 
         <section id="beispiel" class="tutorial-section">
             <h2>Komplettes Beispiel</h2>
-            <p>Dieses Beispiel nutzt Variablen, ein eingebautes Modul, eine Bedingung und Output.</p>
-            <pre><code>radius = integer(4)
-fläche = math.pi.mul(radius.mul(radius))
-writeln("Fläche:")
-writeln(fläche)
-ifcase(fläche.gt(40), "writeln('große Fläche')", "writeln('kleine Fläche')")</code></pre>
+            <p>Dieses Beispiel nutzt Konstanten, For-Loop, Queue, Switch, String-Interpolation und Fehlerbehandlung.</p>
+            <pre><code>limit := integer(3)
+jobs = queue()
+
+for i in range(0, limit.value):
+    jobs.enqueue(f"Job {i}")
+
+try:
+    match jobs.size():
+        case 3:
+            print(f"Bereit: {jobs.size()} Jobs")
+            break
+        default:
+            print("Andere Anzahl")
+except error:
+    print(f"Fehler: {error.message}")</code></pre>
         </section>
     </div>
 </main>

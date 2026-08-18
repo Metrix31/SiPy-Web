@@ -30,6 +30,8 @@
 
             <div class="button-row">
                 <button id="runBtn" class="primary-btn" type="button">Run</button>
+                <button id="stepBtn" type="button">Step</button>
+                <button id="resetDebugBtn" type="button">Reset Debug</button>
                 <button id="clearBtn" type="button">Clear</button>
                 <button id="sampleBtn" type="button">Beispiel</button>
                 <button id="copyBtn" type="button">Copy</button>
@@ -38,11 +40,13 @@
 
         <div id="editor">
             <div id="lineNumbers" aria-hidden="true">1</div>
-            <textarea id="code" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="SiPy Code">a = integer(10)
-b = integer(20)
-c = a.add(b)
-loop(3, "writeln(c)")
-loop(3, "writeln('Hallo')")</textarea>
+            <textarea id="code" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="SiPy Code">limit := integer(3)
+for i in range(0, limit.value):
+    print(f"Index {i}")
+
+werte = stack()
+werte.push("fertig")
+print(werte.pop())</textarea>
         </div>
     </section>
 
@@ -55,6 +59,10 @@ loop(3, "writeln('Hallo')")</textarea>
         </div>
 
         <div id="output" role="log" aria-live="polite"></div>
+        <div class="inspector">
+            <div class="inspector-title">Memory</div>
+            <div id="memoryInspector">Noch keine Variablen.</div>
+        </div>
     </section>
 </main>
 
@@ -62,23 +70,55 @@ loop(3, "writeln('Hallo')")</textarea>
 <script>
     const codeEl = document.getElementById("code");
     const runBtn = document.getElementById("runBtn");
+    const stepBtn = document.getElementById("stepBtn");
+    const resetDebugBtn = document.getElementById("resetDebugBtn");
     const clearBtn = document.getElementById("clearBtn");
     const sampleBtn = document.getElementById("sampleBtn");
     const copyBtn = document.getElementById("copyBtn");
     const statusText = document.getElementById("statusText");
     const editorMeta = document.getElementById("editorMeta");
     const lineNumbers = document.getElementById("lineNumbers");
+    const memoryInspector = document.getElementById("memoryInspector");
     const savedCode = localStorage.getItem("sipy-code");
+    const breakpoints = new Set();
+    let debugSession = null;
+    let activeLine = null;
 
-    const sampleCode = `r = integer(9)
-writeln("Wurzel:")
-writeln(math.sqrt(r))
-ifcase(r.gt(5), "writeln('größer als 5')", "writeln('kleiner als 5')")`;
+    const sampleCode = `limit := integer(4)
+zahlen = queue()
+
+for i in range(0, limit.value):
+    zahlen.enqueue(i)
+
+farbe = enumType("Farbe", ["Rot", "Gruen", "Blau"])
+paar = tuple("Summe", calc("2 + 3 * 4"))
+einzigartig = set("a", "b", "a")
+
+match zahlen.size():
+    case 4:
+        print(f"Queue hat {zahlen.size()} Werte")
+        break
+    default:
+        print("Andere Groesse")
+
+try:
+    print(f"Enum: {farbe.Rot}")
+    print(paar)
+    print(einzigartig)
+except error:
+    print(f"Fehler gefangen: {error.message}")`;
 
     function updateEditorMeta() {
         const lineCount = codeEl.value.split("\n").length;
         editorMeta.textContent = lineCount + (lineCount === 1 ? " Zeile" : " Zeilen");
-        lineNumbers.textContent = Array.from({ length: lineCount }, (_, index) => index + 1).join("\n");
+        lineNumbers.innerHTML = Array.from({ length: lineCount }, (_, index) => {
+            const line = index + 1;
+            const classes = [
+                breakpoints.has(line) ? "has-breakpoint" : "",
+                activeLine === line ? "active-line" : ""
+            ].filter(Boolean).join(" ");
+            return `<button class="${classes}" type="button" data-line="${line}" title="Breakpoint umschalten">${line}</button>`;
+        }).join("");
         localStorage.setItem("sipy-code", codeEl.value);
     }
 
@@ -87,13 +127,71 @@ ifcase(r.gt(5), "writeln('größer als 5')", "writeln('kleiner als 5')")`;
         statusText.dataset.mode = mode;
     }
 
+    function renderMemory(memory = []) {
+        if (!memory.length) {
+            memoryInspector.textContent = "Noch keine Variablen.";
+            return;
+        }
+
+        memoryInspector.innerHTML = memory.map((item) => {
+            const lock = item.constant ? " const" : "";
+            return `<div><strong>${item.name}</strong><span>${item.value}${lock}</span></div>`;
+        }).join("");
+    }
+
+    function renderWarnings(warnings = []) {
+        warnings.forEach((warning) => writeln("Warnung: " + warning));
+    }
+
+    function resetDebugState() {
+        debugSession = null;
+        activeLine = null;
+        renderMemory();
+        updateEditorMeta();
+    }
+
     function runCode() {
         clearOutput();
+        resetDebugState();
         setStatus("Läuft...", "running");
 
         try {
-            const result = runSiPy(codeEl.value);
-            setStatus(result.executedLines + " Zeilen ausgeführt", "ok");
+            const result = runSiPy(codeEl.value, { breakpoints });
+            renderWarnings(result.warnings);
+            renderMemory(result.memory);
+            if (result.paused) {
+                activeLine = result.line;
+                setStatus("Breakpoint in Zeile " + result.line, "running");
+            } else {
+                setStatus(result.executedLines + " Statements ausgeführt", "ok");
+            }
+            updateEditorMeta();
+        } catch (e) {
+            writeln("Fehler: " + e.message);
+            setStatus("Fehler", "error");
+        }
+    }
+
+    function stepCode() {
+        if (!debugSession) {
+            clearOutput();
+            try {
+                debugSession = createDebugSession(codeEl.value, breakpoints);
+            } catch (e) {
+                writeln("Fehler: " + e.message);
+                setStatus("Fehler", "error");
+                return;
+            }
+        }
+
+        try {
+            const next = debugSession.bytecode[debugSession.index];
+            activeLine = next ? next.line : null;
+            const result = stepDebugSession(debugSession);
+            renderWarnings(result.warnings);
+            renderMemory(result.memory);
+            setStatus(result.done ? "Debug fertig" : "Pause nach Zeile " + activeLine, result.done ? "ok" : "running");
+            updateEditorMeta();
         } catch (e) {
             writeln("Fehler: " + e.message);
             setStatus("Fehler", "error");
@@ -101,14 +199,20 @@ ifcase(r.gt(5), "writeln('größer als 5')", "writeln('kleiner als 5')")`;
     }
 
     runBtn.onclick = runCode;
+    stepBtn.onclick = stepCode;
+    resetDebugBtn.onclick = () => {
+        resetDebugState();
+        setStatus("Debug zurückgesetzt");
+    };
     clearBtn.onclick = () => {
         clearOutput();
+        renderMemory();
         setStatus("Bereit");
     };
 
     sampleBtn.onclick = () => {
         codeEl.value = sampleCode;
-        updateEditorMeta();
+        resetDebugState();
         codeEl.focus();
     };
 
@@ -123,7 +227,12 @@ ifcase(r.gt(5), "writeln('größer als 5')", "writeln('kleiner als 5')")`;
         }
     };
 
-    codeEl.addEventListener("input", updateEditorMeta);
+    codeEl.addEventListener("input", () => {
+        codeEl.value = codeEl.value
+            .replace(/„|“|”/g, '"')
+            .replace(/‚|‘|’/g, "'");
+        resetDebugState();
+    });
     codeEl.addEventListener("scroll", () => {
         lineNumbers.scrollTop = codeEl.scrollTop;
     });
@@ -142,19 +251,20 @@ ifcase(r.gt(5), "writeln('größer als 5')", "writeln('kleiner als 5')")`;
             updateEditorMeta();
         }
     });
+    lineNumbers.addEventListener("click", (event) => {
+        const button = event.target.closest("button[data-line]");
+        if (!button) return;
+        const line = Number(button.dataset.line);
+        if (breakpoints.has(line)) breakpoints.delete(line);
+        else breakpoints.add(line);
+        updateEditorMeta();
+    });
 
     if (savedCode) {
         codeEl.value = savedCode;
     }
 
     updateEditorMeta();
-</script>
-<script>
-    codeEl.addEventListener("input", () => {
-        codeEl.value = codeEl.value
-            .replace(/„|“/g, '"')
-            .replace(/‚|‘|’/g, "'");
-    });
 </script>
 </body>
 </html>
