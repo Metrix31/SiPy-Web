@@ -12,11 +12,11 @@ class Basic {
     static string(v)  { return new Basic(String(Basic.toBasic(v).value)); }
     static boolean(v) { return new Basic(Boolean(Basic.toBasic(v).value)); }
 
-    add(other) { return new Basic(this.value + Basic.toBasic(other).value); }
-    sub(other) { return new Basic(this.value - Basic.toBasic(other).value); }
-    mul(other) { return new Basic(this.value * Basic.toBasic(other).value); }
-    div(other) { return new Basic(this.value / Basic.toBasic(other).value); }
-    mod(other) { return new Basic(this.value % Basic.toBasic(other).value); }
+    add(other) { return applyOperatorOverload("add", this, other) || new Basic(this.value + Basic.toBasic(other).value); }
+    sub(other) { return applyOperatorOverload("sub", this, other) || new Basic(this.value - Basic.toBasic(other).value); }
+    mul(other) { return applyOperatorOverload("mul", this, other) || new Basic(this.value * Basic.toBasic(other).value); }
+    div(other) { return applyOperatorOverload("div", this, other) || new Basic(this.value / Basic.toBasic(other).value); }
+    mod(other) { return applyOperatorOverload("mod", this, other) || new Basic(this.value % Basic.toBasic(other).value); }
 
     eq(other)  { return this.value == Basic.toBasic(other).value; }
     neq(other) { return this.value != Basic.toBasic(other).value; }
@@ -92,6 +92,76 @@ class StackValue {
     toString() { return "Stack(" + this.items.map(formatValue).join(", ") + ")"; }
 }
 
+class GenericType {
+    constructor(name, parameters = []) {
+        this.name = String(name);
+        this.parameters = parameters.slice();
+    }
+
+    of(...types) {
+        return Object.freeze({
+            generic: this.name,
+            parameters: this.parameters.slice(),
+            types: types.map(String),
+            toString: () => this.name + "<" + types.map(String).join(", ") + ">"
+        });
+    }
+
+    toString() { return this.name + "<" + this.parameters.join(", ") + ">"; }
+}
+
+class InterfaceType {
+    constructor(name, members = []) {
+        this.name = String(name);
+        this.members = members.map(String);
+    }
+
+    check(value) {
+        const target = value instanceof Basic ? value.value : value;
+        return this.members.every((member) => target && member in target);
+    }
+
+    toString() { return "interface " + this.name; }
+}
+
+class BitfieldType {
+    constructor(name, fields = []) {
+        this.name = String(name);
+        this.fields = fields.map(String);
+        this.bits = Object.fromEntries(this.fields.map((field, index) => [field, 1 << index]));
+    }
+
+    value(...fields) {
+        const mask = fields.flat().reduce((current, field) => current | (this.bits[String(field)] || 0), 0);
+        return Object.freeze({
+            type: this.name,
+            mask,
+            has: (field) => (mask & (this.bits[String(field)] || 0)) !== 0,
+            toString: () => this.name + "(" + this.fields.filter((field) => (mask & this.bits[field]) !== 0).join("|") + ")"
+        });
+    }
+
+    toString() { return "bitfield " + this.name; }
+}
+
+class LazyValue {
+    constructor(factory) {
+        this.factory = factory;
+        this.done = false;
+        this.cached = undefined;
+    }
+
+    value() {
+        if (!this.done) {
+            this.cached = this.factory();
+            this.done = true;
+        }
+        return this.cached;
+    }
+
+    toString() { return formatValue(this.value()); }
+}
+
 function unwrapValue(value) {
     return value instanceof Basic ? value.value : value;
 }
@@ -109,11 +179,77 @@ const floater = Basic.floater;
 const string  = Basic.string;
 const boolean = Basic.boolean;
 const pi      = Basic.pi;
+const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
 
 function tuple(...items) { return new TupleValue(items); }
 function set(...items) { return new SetValue(items); }
 function queue(...items) { return new QueueValue(items); }
 function stack(...items) { return new StackValue(items); }
+function generic(name, parameters = []) { return new GenericType(name, parameters); }
+function interfaceType(name, members = []) { return new InterfaceType(name, members); }
+function implementsInterface(value, iface) { return iface instanceof InterfaceType ? iface.check(value) : false; }
+function bitfield(name, fields = []) { return new BitfieldType(name, fields); }
+function lazy(factory) { return new LazyValue(factory); }
+function force(value) { return value instanceof LazyValue ? value.value() : value; }
+function generator(...items) { return items[Symbol.iterator](); }
+function coroutine(action) { return { next: () => Promise.resolve(typeof action === "function" ? action() : action) }; }
+function staticClass(name, members = {}) { return Object.freeze({ className: String(name), ...members }); }
+function attr(value, name, data = true) { return withAttributes(value, [{ name: String(name), data }]); }
+
+const operatorOverloads = new Map();
+
+function overload(typeName, operator, fn) {
+    operatorOverloads.set(String(typeName) + ":" + String(operator), fn);
+}
+
+function applyOperatorOverload(operator, left, right) {
+    const key = left && left.constructor ? left.constructor.name + ":" + operator : "";
+    const fn = operatorOverloads.get(key);
+    return fn ? fn(left, right) : null;
+}
+
+function withAttributes(value, attributes) {
+    if (value && (typeof value === "object" || typeof value === "function")) {
+        const existing = value.__sipyAttributes || [];
+        Object.defineProperty(value, "__sipyAttributes", {
+            value: existing.concat(attributes),
+            enumerable: false,
+            configurable: true
+        });
+        return value;
+    }
+
+    return { value, __sipyAttributes: attributes, toString: () => formatValue(value) };
+}
+
+function cast(value, targetType) {
+    const raw = unwrapValue(force(value));
+    switch (String(targetType).toLowerCase()) {
+        case "int":
+        case "integer":
+            return integer(raw);
+        case "float":
+        case "floater":
+            return floater(raw);
+        case "str":
+        case "string":
+            return string(raw);
+        case "bool":
+        case "boolean":
+            return boolean(raw);
+        default:
+            throw new Error("Unbekannter Cast-Typ '" + targetType + "'");
+    }
+}
+
+function toIterator(value) {
+    value = force(value);
+    if (value instanceof QueueValue || value instanceof StackValue) return value.items[Symbol.iterator]();
+    if (value instanceof SetValue) return value.toArray()[Symbol.iterator]();
+    if (value instanceof TupleValue) return value.toArray()[Symbol.iterator]();
+    if (value && typeof value[Symbol.iterator] === "function") return value[Symbol.iterator]();
+    throw new Error("Wert ist nicht iterierbar");
+}
 
 function enumType(name, members) {
     const enumName = String(name);
@@ -143,30 +279,30 @@ function getln(promptText = "") {
     return result === null ? "" : result;
 }
 
-function loop(count, action) {
+async function loop(count, action) {
     count = Basic.toBasic(count).value;
 
     if (typeof action === "string") {
         for (let i = 0; i < count; i++) {
-            executeInline(action);
+            await executeInline(action);
         }
         return;
     }
 
     if (typeof action === "function") {
-        for (let i = 0; i < count; i++) action();
+        for (let i = 0; i < count; i++) await action();
         return;
     }
 
     warn("loop() erwartet String oder Funktion");
 }
 
-function ifcase(condition, actionTrue, actionFalse = null) {
+async function ifcase(condition, actionTrue, actionFalse = null) {
     condition = condition instanceof Basic ? condition.value : condition;
     const selected = condition ? actionTrue : actionFalse;
     if (selected === null) return;
-    if (typeof selected === "string") executeInline(selected);
-    else if (typeof selected === "function") selected();
+    if (typeof selected === "string") await executeInline(selected);
+    else if (typeof selected === "function") await selected();
 }
 
 const modules = {
@@ -183,6 +319,22 @@ const modules = {
         trim: (s) => String(Basic.toBasic(s).value).trim()
     },
     collections: { tuple, set, queue, stack },
+    types: {
+        generic,
+        interface: interfaceType,
+        implements: implementsInterface,
+        bitfield,
+        cast,
+        staticClass,
+        attr
+    },
+    concurrency: {
+        sleep: (ms) => new Promise((resolve) => setTimeout(resolve, Basic.toBasic(ms).value)),
+        coroutine,
+        generator,
+        lazy,
+        force
+    },
     random: {
         int: (min, max) => {
             min = Basic.toBasic(min).value;
@@ -193,11 +345,7 @@ const modules = {
     },
     time: {
         now: () => new Date().toLocaleString(),
-        sleep: (ms) => {
-            ms = Basic.toBasic(ms).value;
-            const start = Date.now();
-            while (Date.now() - start < ms) {}
-        }
+        sleep: (ms) => new Promise((resolve) => setTimeout(resolve, Basic.toBasic(ms).value))
     }
 };
 
@@ -205,10 +353,15 @@ let vars = {};
 let constants = new Set();
 let warnings = [];
 let compiledCache = { code: null, bytecode: null };
+let runtimeLimits = { startedAt: 0, timeoutMs: 1000, memoryCap: 200 };
 const runtimeNames = new Set([
     "math", "strings", "collections", "random", "time",
+    "types", "concurrency",
     "integer", "floater", "string", "boolean", "pi",
     "tuple", "set", "queue", "stack", "enumType", "calc", "f", "print",
+    "generic", "interfaceType", "implementsInterface", "bitfield", "cast",
+    "lazy", "force", "generator", "coroutine", "staticClass", "attr", "overload",
+    "toIterator",
     "writeln", "getln", "loop", "ifcase", "warn", "breakpoint", "True", "False", "None"
 ]);
 
@@ -217,6 +370,8 @@ function createDefaultVars() {
         math: modules.math,
         strings: modules.strings,
         collections: modules.collections,
+        types: modules.types,
+        concurrency: modules.concurrency,
         random: modules.random,
         time: modules.time,
         integer,
@@ -229,6 +384,19 @@ function createDefaultVars() {
         queue,
         stack,
         enumType,
+        generic,
+        interfaceType,
+        implementsInterface,
+        bitfield,
+        cast,
+        lazy,
+        force,
+        generator,
+        coroutine,
+        staticClass,
+        attr,
+        overload,
+        toIterator,
         calc,
         f,
         print: writeln,
@@ -247,7 +415,15 @@ function createDefaultVars() {
 function importModule(name) {
     name = String(name);
     if (!modules[name]) throw new Error("Modul '" + name + "' nicht gefunden");
-    vars[name] = modules[name];
+    vars[name] = Object.freeze({ ...modules[name] });
+}
+
+function importModuleAs(name, alias) {
+    name = String(name);
+    alias = String(alias);
+    if (!modules[name]) throw new Error("Modul '" + name + "' nicht gefunden");
+    if (runtimeNames.has(alias)) throw new Error("Alias '" + alias + "' kollidiert mit einem Runtime-Namen");
+    vars[alias] = Object.freeze({ ...modules[name] });
 }
 
 function warn(message) {
@@ -287,9 +463,9 @@ function runExpression(expr) {
     return Function("vars", "Basic", "formatValue", "with (vars) { return formatValue(" + expr + "); }")(vars, Basic, formatValue);
 }
 
-function executeInline(code) {
+async function executeInline(code) {
     const bytecode = compileSiPy(code).bytecode;
-    executeBytecode(bytecode);
+    await executeBytecode(bytecode);
 }
 
 function debugBreakpoint() {
@@ -364,11 +540,16 @@ function compileSiPy(code) {
     if (compiledCache.code === normalized) return compiledCache.bytecode;
 
     const cleanCode = stripComments(normalized);
-    const lines = expandPythonBlocks(cleanCode);
+    const expanded = expandPythonBlocks(cleanCode);
+    const ast = generateAst(expanded);
+    const lines = optimizeEntries(expanded);
     const bytecode = [];
     const declared = new Set(Object.keys(createDefaultVars()));
     const assigned = new Set();
     const usedText = cleanCode;
+    const parserErrors = [];
+    const variableWrites = [];
+    let pendingAttributes = [];
 
     let buffer = [];
     let startLine = 1;
@@ -378,23 +559,45 @@ function compileSiPy(code) {
         const source = entry.source.trim();
         if (!source) return;
 
+        if (source === "pass") return;
+
+        if (source.startsWith("@")) {
+            pendingAttributes.push(parseAttribute(source, entry.line));
+            return;
+        }
+
         if (buffer.length === 0) startLine = entry.line;
-        const transformed = transformLine(source, entry.line, declared, assigned);
+        let transformed;
+        try {
+            transformed = transformLine(source, entry.line, declared, assigned, pendingAttributes);
+            pendingAttributes = [];
+            if (transformed.variableWrite) variableWrites.push({ name: transformed.variableWrite, line: entry.line });
+            transformed = transformed.js || transformed;
+        } catch (error) {
+            parserErrors.push(error.message);
+            pendingAttributes = [];
+            return;
+        }
         buffer.push(transformed);
         depth += braceDelta(transformed);
 
-        if (depth < 0) throw new Error("Zeile " + entry.line + ": Unerwartete schliessende Klammer");
+        if (depth < 0) parserErrors.push("Zeile " + entry.line + ": Unerwartete schliessende Klammer");
         if (depth === 0) {
-            bytecode.push({
-                line: startLine,
-                source: buffer.join("\n"),
-                run: createStatementRunner(buffer.join("\n"), startLine)
-            });
+            try {
+                bytecode.push({
+                    line: startLine,
+                    source: buffer.join("\n"),
+                    run: createStatementRunner(buffer.join("\n"), startLine)
+                });
+            } catch (error) {
+                parserErrors.push(error.message);
+            }
             buffer = [];
         }
     });
 
-    if (depth !== 0) throw new Error("Block wurde nicht geschlossen");
+    if (depth !== 0) parserErrors.push("Block wurde nicht geschlossen");
+    if (pendingAttributes.length) parserErrors.push("Attribute-Annotation ohne Ziel");
 
     assigned.forEach((name) => {
         const reads = new RegExp("\\b" + escapeRegExp(name) + "\\b", "g");
@@ -402,7 +605,18 @@ function compileSiPy(code) {
         if (!occurrences || occurrences.length < 2) warn("Variable '" + name + "' wird gesetzt, aber nicht weiter verwendet");
     });
 
-    const result = { bytecode };
+    if (parserErrors.length) {
+        throw new Error("Parserfehler:\n" + parserErrors.join("\n"));
+    }
+
+    const result = {
+        bytecode,
+        debug: {
+            ast,
+            optimizerPasses: ["peephole:pass-removal", "dead-code:basic-break-trim"],
+            variableWrites
+        }
+    };
     compiledCache = { code: normalized, bytecode: result };
     return result;
 }
@@ -450,10 +664,92 @@ function expandPythonBlocks(code) {
 
     while (stack.length > 1) {
         const closed = stack.pop();
-        if (closed.closesWithBrace) entries.push({ line: rawLines.length, source: "}" });
+        if (closed.closesWithBrace) entries.push({ line: rawLines.length, source: "}", indent: 0 });
     }
 
     return entries;
+}
+
+function generateAst(entries) {
+    return entries
+        .filter((entry) => entry.source !== "}")
+        .map((entry) => ({
+            line: entry.line,
+            kind: astKind(entry.source),
+            source: entry.source
+        }));
+}
+
+function astKind(source) {
+    if (source.startsWith("@")) return "attribute";
+    if (/^for\b/.test(source)) return "for";
+    if (/^(match|switch)\b/.test(source)) return "match";
+    if (/^case\b/.test(source)) return "case";
+    if (/^interface\b/.test(source)) return "interface";
+    if (/^generic\b/.test(source)) return "generic";
+    if (/^try\b|^except\b|^finally\b/.test(source)) return "error-handling";
+    if (/^[A-Za-z_$\u00C0-\uFFFF][\w$\u00C0-\uFFFF]*\s*:?=/.test(source)) return "assignment";
+    return "expression";
+}
+
+function optimizeEntries(entries) {
+    // Dead-code trim: once a `case`/`default` body reaches an unconditional
+    // break/return *at its own nesting level*, any further statements before
+    // the next case/default/close are unreachable and can be dropped.
+    // Crucially this must NOT trigger on a break/return nested inside a
+    // for/while/if/try that lives inside the case body - a `break` that
+    // exits an inner loop does not end the surrounding case.
+    const optimized = [];
+    let skipFromDepth = null; // depth at which the triggering break/return sat
+    let depth = 0;
+
+    for (const entry of entries) {
+        const trimmed = entry.source.trim();
+        if (trimmed === "pass") continue;
+
+        const isClose = trimmed === "}";
+        const isCaseLabel = /^(case\b|default\s*:)/.test(trimmed);
+        // elif/else/except/finally implicitly close the block they continue
+        // (no separate "}" entry is emitted for that dedent upstream), so
+        // treat them the same as a close for depth purposes before reopening.
+        const isContinuation = isContinuationLine(trimmed);
+        const opensBlock = !isCaseLabel && trimmed.endsWith(":");
+
+        if (isContinuation) depth--;
+
+        if (skipFromDepth !== null) {
+            // Stop skipping once we dedent back to (or above) the level the
+            // break/return happened at, and land on a case/default/close/continuation.
+            if ((isCaseLabel || isClose || isContinuation) && depth <= skipFromDepth) {
+                skipFromDepth = null;
+            } else {
+                if (isClose) depth--;
+                else if (opensBlock) depth++;
+                continue;
+            }
+        }
+
+        optimized.push(entry);
+
+        if (isClose) {
+            depth--;
+        } else if (opensBlock) {
+            depth++;
+        }
+
+        if (skipFromDepth === null && /^(break|return)\b/.test(trimmed)) {
+            skipFromDepth = depth;
+        }
+    }
+
+    return optimized;
+}
+
+function parseAttribute(source, line) {
+    const match = source.match(/^@([A-Za-z_$\u00C0-\uFFFF][\w$\u00C0-\uFFFF]*)(?:\((.*)\))?$/u);
+    if (!match) throw new Error("Zeile " + line + ": Ungueltige Attribute-Annotation");
+    const data = match[2] ? transformInterpolatedStrings(match[2]) : "true";
+    return "{ name: " + JSON.stringify(match[1]) + ", data: " + data + " }";
 }
 
 function isContinuationLine(source) {
@@ -477,21 +773,47 @@ function pythonBlockKind(source) {
     return "brace";
 }
 
-function transformLine(line, lineNumber, declared, assigned) {
+function applyPendingAttributes(expr, pendingAttributes) {
+    if (!pendingAttributes.length) return expr;
+    return "withAttributes(" + expr + ", [" + pendingAttributes.join(", ") + "])";
+}
+
+function transformLine(line, lineNumber, declared, assigned, pendingAttributes = []) {
+    const importAlias = line.match(/^import\s+([A-Za-z_$\u00C0-\uFFFF][\w$\u00C0-\uFFFF]*)\s+as\s+([A-Za-z_$\u00C0-\uFFFF][\w$\u00C0-\uFFFF]*)$/u);
+    if (importAlias) return "importModuleAs(" + JSON.stringify(importAlias[1]) + ", " + JSON.stringify(importAlias[2]) + ");";
+
     if (/^import\s*\(/.test(line)) return line.replace(/^import\s*\(/, "importModule(");
+
+    const genericLine = line.match(/^generic\s+([A-Za-z_$\u00C0-\uFFFF][\w$\u00C0-\uFFFF]*)\s*\[(.*)\]$/u);
+    if (genericLine) {
+        const name = genericLine[1];
+        const params = splitArgs(genericLine[2]).map((part) => JSON.stringify(part));
+        declared.add(name);
+        assigned.add(name);
+        return { js: "setVar(" + JSON.stringify(name) + ", generic(" + JSON.stringify(name) + ", [" + params.join(", ") + "]));", variableWrite: name };
+    }
+
+    const interfaceLine = line.match(/^interface\s+([A-Za-z_$\u00C0-\uFFFF][\w$\u00C0-\uFFFF]*)\s*\((.*)\)$/u);
+    if (interfaceLine) {
+        const name = interfaceLine[1];
+        const members = splitArgs(interfaceLine[2]).map((part) => JSON.stringify(part.replace(/^["']|["']$/g, "")));
+        declared.add(name);
+        assigned.add(name);
+        return { js: "setVar(" + JSON.stringify(name) + ", interfaceType(" + JSON.stringify(name) + ", [" + members.join(", ") + "]));", variableWrite: name };
+    }
 
     const constMatch = line.match(/^const\s+([A-Za-z_$\u00C0-\uFFFF][\w$\u00C0-\uFFFF]*)\s*=\s*(.+)$/u);
     if (constMatch) {
         declared.add(constMatch[1]);
         assigned.add(constMatch[1]);
-        return "defineConst(" + JSON.stringify(constMatch[1]) + ", " + transformInterpolatedStrings(constMatch[2]) + ");";
+        return { js: "defineConst(" + JSON.stringify(constMatch[1]) + ", " + applyPendingAttributes(transformInterpolatedStrings(constMatch[2]), pendingAttributes) + ");", variableWrite: constMatch[1] };
     }
 
     const walrusConst = line.match(/^([A-Za-z_$\u00C0-\uFFFF][\w$\u00C0-\uFFFF]*)\s*:=\s*(.+)$/u);
     if (walrusConst) {
         declared.add(walrusConst[1]);
         assigned.add(walrusConst[1]);
-        return "defineConst(" + JSON.stringify(walrusConst[1]) + ", " + transformInterpolatedStrings(walrusConst[2]) + ");";
+        return { js: "defineConst(" + JSON.stringify(walrusConst[1]) + ", " + applyPendingAttributes(transformInterpolatedStrings(walrusConst[2]), pendingAttributes) + ");", variableWrite: walrusConst[1] };
     }
 
     const forRange = line.match(/^for\s+([A-Za-z_$\u00C0-\uFFFF][\w$\u00C0-\uFFFF]*)\s+in\s+range\s*\((.*)\)\s*:$/u);
@@ -504,6 +826,14 @@ function transformLine(line, lineNumber, declared, assigned) {
         declared.add(name);
         assigned.add(name);
         return "for (setVar(" + JSON.stringify(name) + ", " + start + "); vars[" + JSON.stringify(name) + "] < (" + end + "); setVar(" + JSON.stringify(name) + ", vars[" + JSON.stringify(name) + "] + (" + step + "))) {";
+    }
+
+    const forIterator = line.match(/^for\s+([A-Za-z_$\u00C0-\uFFFF][\w$\u00C0-\uFFFF]*)\s+in\s+(.+)\s*:$/u);
+    if (forIterator) {
+        const name = forIterator[1];
+        declared.add(name);
+        assigned.add(name);
+        return "for (const __sipyItem of toIterator(" + transformInterpolatedStrings(forIterator[2]) + ")) { setVar(" + JSON.stringify(name) + ", __sipyItem);";
     }
 
     const matchLine = line.match(/^(match|switch)\s+(.+)\s*:$/u);
@@ -536,7 +866,7 @@ function transformLine(line, lineNumber, declared, assigned) {
     if (assignment && !/^(if|for|while|switch|catch)\b/.test(line)) {
         declared.add(assignment[1]);
         assigned.add(assignment[1]);
-        return "setVar(" + JSON.stringify(assignment[1]) + ", " + transformInterpolatedStrings(assignment[2]) + ");";
+        return { js: "setVar(" + JSON.stringify(assignment[1]) + ", " + applyPendingAttributes(transformInterpolatedStrings(assignment[2]), pendingAttributes) + ");", variableWrite: assignment[1] };
     }
 
     const jsFor = line.match(/^for\s*\(\s*([A-Za-z_$\u00C0-\uFFFF][\w$\u00C0-\uFFFF]*)\s*=\s*([^;]+);(.+)$/u);
@@ -619,8 +949,8 @@ function braceDelta(text) {
 
 function createStatementRunner(js, line) {
     try {
-        return Function(
-            "vars", "Basic", "setVar", "defineConst", "importModule", "formatValue",
+        return AsyncFunction(
+            "vars", "Basic", "setVar", "defineConst", "importModule", "importModuleAs", "formatValue", "withAttributes",
             "with (vars) {\n" + js + "\n}"
         );
     } catch (error) {
@@ -628,16 +958,17 @@ function createStatementRunner(js, line) {
     }
 }
 
-function executeBytecode(bytecode, options = {}) {
+async function executeBytecode(bytecode, options = {}) {
     let executedLines = 0;
     const maxSteps = options.maxSteps || Infinity;
     for (let index = options.startIndex || 0; index < bytecode.length && executedLines < maxSteps; index++) {
         const statement = bytecode[index];
+        checkRuntimeLimits(statement.line);
         if (options.breakpoints && options.breakpoints.has(statement.line)) {
             return { executedLines, paused: true, index, line: statement.line, reason: "breakpoint" };
         }
         try {
-            statement.run(vars, Basic, setVar, defineConst, importModule, formatValue);
+            await statement.run(vars, Basic, setVar, defineConst, importModule, importModuleAs, formatValue, withAttributes);
             executedLines++;
         } catch (error) {
             if (error.isBreakpoint) {
@@ -650,42 +981,64 @@ function executeBytecode(bytecode, options = {}) {
     return { executedLines, paused: false, index: Math.min(nextIndex, bytecode.length) };
 }
 
-function resetRuntime() {
+function checkRuntimeLimits(line) {
+    if (runtimeLimits.timeoutMs > 0 && Date.now() - runtimeLimits.startedAt > runtimeLimits.timeoutMs) {
+        throw new Error("Zeile " + line + ": Runtime-Timeout nach " + runtimeLimits.timeoutMs + " ms");
+    }
+    const memorySize = Object.keys(vars).filter((key) => !runtimeNames.has(key)).length;
+    if (runtimeLimits.memoryCap > 0 && memorySize > runtimeLimits.memoryCap) {
+        throw new Error("Zeile " + line + ": Memory-Cap von " + runtimeLimits.memoryCap + " Variablen erreicht");
+    }
+}
+
+function resetRuntime(options = {}) {
     vars = createDefaultVars();
     constants = new Set();
     warnings = [];
+    runtimeLimits = {
+        startedAt: Date.now(),
+        timeoutMs: options.timeoutMs ?? 1000,
+        memoryCap: options.memoryCap ?? 200
+    };
 }
 
-function runSiPy(code, options = {}) {
-    resetRuntime();
+async function runSiPy(code, options = {}) {
+    resetRuntime(options);
     const compiled = compileSiPy(code);
-    const result = executeBytecode(compiled.bytecode, options);
+    const result = await executeBytecode(compiled.bytecode, options);
     result.warnings = warnings.slice();
     result.memory = inspectMemory();
+    result.debug = compiled.debug;
     return result;
 }
 
-function createDebugSession(code, breakpoints = new Set()) {
-    resetRuntime();
+function createDebugSession(code, breakpoints = new Set(), options = {}) {
+    resetRuntime(options);
     const compiled = compileSiPy(code);
     return {
         bytecode: compiled.bytecode,
+        debug: compiled.debug,
         index: 0,
         breakpoints: new Set(breakpoints),
         done: compiled.bytecode.length === 0
     };
 }
 
-function stepDebugSession(session) {
+async function stepDebugSession(session) {
     if (!session || session.done) return { done: true, warnings: warnings.slice(), memory: inspectMemory() };
-    const result = executeBytecode(session.bytecode, {
+    // The timeout budget must only cover the time actually spent executing
+    // SiPy code, not the real-world time a user spends thinking between
+    // clicks of "Step". Without this reset, pausing for more than
+    // timeoutMs between steps falsely throws a Runtime-Timeout error.
+    runtimeLimits.startedAt = Date.now();
+    const result = await executeBytecode(session.bytecode, {
         startIndex: session.index,
         breakpoints: session.breakOnRun ? session.breakpoints : null,
         maxSteps: 1
     });
-    session.index = result.paused ? result.index : result.index;
+    session.index = result.index;
     session.done = session.index >= session.bytecode.length;
-    return { ...result, done: session.done, warnings: warnings.slice(), memory: inspectMemory() };
+    return { ...result, done: session.done, warnings: warnings.slice(), memory: inspectMemory(), debug: session.debug };
 }
 
 function inspectMemory() {

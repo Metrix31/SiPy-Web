@@ -131,11 +131,45 @@ button:hover,
     color: #ff6f91;
 }
 
+.limits-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+    padding: 10px 16px;
+    border-bottom: 1px solid rgba(164, 94, 255, 0.16);
+    background: rgba(14, 14, 18, 0.35);
+}
+
+.limits-row label {
+    color: var(--text-dim);
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.limits-row input[type="number"] {
+    width: 88px;
+    background: rgba(24, 24, 32, 0.92);
+    border: 1px solid var(--border);
+    color: var(--text-light);
+    font-family: var(--font-main);
+    font-size: 13px;
+    padding: 6px 8px;
+    border-radius: var(--radius);
+    outline: none;
+    transition: var(--transition);
+}
+
+.limits-row input[type="number"]:focus-visible {
+    outline: 2px solid var(--accent-green);
+    outline-offset: 2px;
+}
+
 #editor {
     display: grid;
     grid-template-columns: 48px minmax(0, 1fr);
-    height: calc(100vh - 190px);
-    min-height: 360px;
+    height: calc(100vh - 234px);
+    min-height: 320px;
     overflow: hidden;
 }
 
@@ -288,7 +322,7 @@ textarea {
 
 #output {
     flex: 1;
-    min-height: 220px;
+    min-height: 180px;
     padding: 16px;
     color: var(--accent-green);
     font-size: 14px;
@@ -309,17 +343,19 @@ textarea {
     margin-bottom: 8px;
 }
 
-#memoryInspector {
+#memoryInspector,
+#trackingInspector {
     display: grid;
     gap: 6px;
     color: var(--text-light);
     font-size: 13px;
     line-height: 1.45;
-    max-height: 180px;
+    max-height: 150px;
     overflow: auto;
 }
 
-#memoryInspector div {
+#memoryInspector div,
+#trackingInspector div {
     display: grid;
     grid-template-columns: minmax(80px, 0.4fr) minmax(0, 1fr);
     gap: 10px;
@@ -327,13 +363,15 @@ textarea {
     border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-#memoryInspector strong {
+#memoryInspector strong,
+#trackingInspector strong {
     color: var(--accent-green);
     font-weight: 600;
     overflow-wrap: anywhere;
 }
 
-#memoryInspector span {
+#memoryInspector span,
+#trackingInspector span {
     color: var(--text-light);
     overflow-wrap: anywhere;
 }

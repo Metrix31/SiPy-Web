@@ -38,6 +38,13 @@
             </div>
         </div>
 
+        <div class="limits-row" aria-label="Laufzeit-Limits">
+            <label for="timeoutInput">Timeout (ms)</label>
+            <input id="timeoutInput" type="number" min="0" step="100" value="1000" inputmode="numeric">
+            <label for="memoryCapInput">Memory-Cap (Variablen)</label>
+            <input id="memoryCapInput" type="number" min="0" step="10" value="200" inputmode="numeric">
+        </div>
+
         <div id="editor">
             <div id="lineNumbers" aria-hidden="true">1</div>
             <textarea id="code" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="SiPy Code">limit := integer(3)
@@ -63,6 +70,10 @@ print(werte.pop())</textarea>
             <div class="inspector-title">Memory</div>
             <div id="memoryInspector">Noch keine Variablen.</div>
         </div>
+        <div class="inspector">
+            <div class="inspector-title">Variablen-Tracking</div>
+            <div id="trackingInspector">Noch keine Zuweisungen.</div>
+        </div>
     </section>
 </main>
 
@@ -79,12 +90,24 @@ print(werte.pop())</textarea>
     const editorMeta = document.getElementById("editorMeta");
     const lineNumbers = document.getElementById("lineNumbers");
     const memoryInspector = document.getElementById("memoryInspector");
+    const trackingInspector = document.getElementById("trackingInspector");
+    const timeoutInput = document.getElementById("timeoutInput");
+    const memoryCapInput = document.getElementById("memoryCapInput");
     const savedCode = localStorage.getItem("sipy-code");
     const breakpoints = new Set();
     let debugSession = null;
     let activeLine = null;
 
-    const sampleCode = `limit := integer(4)
+    const sampleCode = `import math as m
+
+generic Box[T]
+interface Named(name)
+Flags = bitfield("Flags", ["Read", "Write"])
+UserType = Box.of("User")
+
+@tracked("demo")
+user = { name: "Ada" }
+limit := cast(4, "integer")
 zahlen = queue()
 
 for i in range(0, limit.value):
@@ -93,6 +116,7 @@ for i in range(0, limit.value):
 farbe = enumType("Farbe", ["Rot", "Gruen", "Blau"])
 paar = tuple("Summe", calc("2 + 3 * 4"))
 einzigartig = set("a", "b", "a")
+rechte = Flags.value("Read", "Write")
 
 match zahlen.size():
     case 4:
@@ -103,10 +127,33 @@ match zahlen.size():
 
 try:
     print(f"Enum: {farbe.Rot}")
+    print(f"Interface passt: {implementsInterface(user, Named)}")
+    print(f"Generic: {UserType}")
+    print(rechte)
     print(paar)
     print(einzigartig)
+    await time.sleep(10)
+    print(f"Wurzel: {m.sqrt(16)}")
 except error:
     print(f"Fehler gefangen: {error.message}")`;
+
+    function escapeHtml(text) {
+        return String(text)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#39;");
+    }
+
+    function readLimitOptions() {
+        const timeoutMs = Number(timeoutInput.value);
+        const memoryCap = Number(memoryCapInput.value);
+        return {
+            timeoutMs: Number.isFinite(timeoutMs) && timeoutMs >= 0 ? timeoutMs : 1000,
+            memoryCap: Number.isFinite(memoryCap) && memoryCap >= 0 ? memoryCap : 200
+        };
+    }
 
     function updateEditorMeta() {
         const lineCount = codeEl.value.split("\n").length;
@@ -135,7 +182,19 @@ except error:
 
         memoryInspector.innerHTML = memory.map((item) => {
             const lock = item.constant ? " const" : "";
-            return `<div><strong>${item.name}</strong><span>${item.value}${lock}</span></div>`;
+            return `<div><strong>${escapeHtml(item.name)}</strong><span>${escapeHtml(item.value)}${escapeHtml(lock)}</span></div>`;
+        }).join("");
+    }
+
+    function renderTracking(debugInfo) {
+        const writes = debugInfo && debugInfo.variableWrites ? debugInfo.variableWrites : [];
+        if (!writes.length) {
+            trackingInspector.textContent = "Noch keine Zuweisungen.";
+            return;
+        }
+
+        trackingInspector.innerHTML = writes.map((entry) => {
+            return `<div><strong>${escapeHtml(entry.name)}</strong><span>Zeile ${escapeHtml(entry.line)}</span></div>`;
         }).join("");
     }
 
@@ -147,18 +206,20 @@ except error:
         debugSession = null;
         activeLine = null;
         renderMemory();
+        renderTracking();
         updateEditorMeta();
     }
 
-    function runCode() {
+    async function runCode() {
         clearOutput();
         resetDebugState();
         setStatus("Läuft...", "running");
 
         try {
-            const result = runSiPy(codeEl.value, { breakpoints });
+            const result = await runSiPy(codeEl.value, { breakpoints, ...readLimitOptions() });
             renderWarnings(result.warnings);
             renderMemory(result.memory);
+            renderTracking(result.debug);
             if (result.paused) {
                 activeLine = result.line;
                 setStatus("Breakpoint in Zeile " + result.line, "running");
@@ -172,11 +233,11 @@ except error:
         }
     }
 
-    function stepCode() {
+    async function stepCode() {
         if (!debugSession) {
             clearOutput();
             try {
-                debugSession = createDebugSession(codeEl.value, breakpoints);
+                debugSession = createDebugSession(codeEl.value, breakpoints, readLimitOptions());
             } catch (e) {
                 writeln("Fehler: " + e.message);
                 setStatus("Fehler", "error");
@@ -187,9 +248,10 @@ except error:
         try {
             const next = debugSession.bytecode[debugSession.index];
             activeLine = next ? next.line : null;
-            const result = stepDebugSession(debugSession);
+            const result = await stepDebugSession(debugSession);
             renderWarnings(result.warnings);
             renderMemory(result.memory);
+            renderTracking(result.debug);
             setStatus(result.done ? "Debug fertig" : "Pause nach Zeile " + activeLine, result.done ? "ok" : "running");
             updateEditorMeta();
         } catch (e) {
@@ -207,6 +269,7 @@ except error:
     clearBtn.onclick = () => {
         clearOutput();
         renderMemory();
+        renderTracking();
         setStatus("Bereit");
     };
 

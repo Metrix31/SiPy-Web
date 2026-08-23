@@ -28,6 +28,7 @@
         <a href="#ausgabe">Ausgabe</a>
         <a href="#kontrolle">Kontrolle</a>
         <a href="#collections">Collections</a>
+        <a href="#erweitert">Erweiterte Typen</a>
         <a href="#debugging">Debugging</a>
         <a href="#module">Module</a>
         <a href="#beispiel">Beispiel</a>
@@ -84,6 +85,7 @@ try:
     x = integer(2)
 except error:
     print(f"Gefangen: {error.message}")</code></pre>
+            <p>Ein <code>break</code> innerhalb einer verschachtelten Schleife oder eines <code>if</code>/<code>elif</code> beendet nur diese Schleife bzw. Bedingung — nicht automatisch den umgebenden <code>case</code>-Block. Der Rest des <code>case</code>-Codes danach wird ganz normal weiter ausgeführt.</p>
         </section>
 
         <section id="collections" class="tutorial-section">
@@ -104,6 +106,29 @@ print(stapel.pop())
 print(Status.Fertig)</code></pre>
         </section>
 
+        <section id="erweitert" class="tutorial-section">
+            <h2>Generics, Interfaces, Bitfields und mehr</h2>
+            <p>Für größere Programme bietet SiPy generische Typen, Interfaces, Bitfields, Casts, statische Klassen und Attribute-Annotationen.</p>
+            <pre><code>generic Box[T]
+interface Named(name)
+Flags = bitfield("Flags", ["Read", "Write"])
+UserType = Box.of("User")
+
+@tracked("demo")
+user = { name: "Ada" }
+
+limit := cast(4, "integer")
+rechte = Flags.value("Read", "Write")
+
+print(implementsInterface(user, Named))
+print(UserType)
+print(rechte)</code></pre>
+            <p>Asynchrone Abläufe und Coroutinen laufen über <code>await</code> und das <code>concurrency</code>-Modul:</p>
+            <pre><code>import concurrency as go
+await go.sleep(200)
+print("fertig gewartet")</code></pre>
+        </section>
+
         <section id="debugging" class="tutorial-section">
             <h2>Debugging</h2>
             <p>Klicke links auf eine Zeilennummer, um einen Breakpoint zu setzen. <code>Step</code> führt ein Statement aus und der Memory-Inspector zeigt Variablen an.</p>
@@ -111,17 +136,27 @@ print(Status.Fertig)</code></pre>
 breakpoint()
 a = a.add(2)
 print(a)</code></pre>
+            <p>
+                Oberhalb des Editors lassen sich <strong>Timeout</strong> (in Millisekunden) und <strong>Memory-Cap</strong>
+                (maximale Anzahl gleichzeitiger Variablen) konfigurieren. Beim schrittweisen Debuggen zählt der Timeout nur
+                die tatsächliche Ausführungszeit eines Schritts — Pausen zwischen Klicks auf <code>Step</code> lösen keinen
+                Timeout-Fehler mehr aus.
+            </p>
+            <p>
+                Unter dem Memory-Inspector zeigt <strong>Variablen-Tracking</strong> jede Zuweisung aus dem Quellcode mit
+                Zeilennummer an, damit nachvollziehbar bleibt, wo eine Variable gesetzt wurde.
+            </p>
         </section>
 
         <section id="module" class="tutorial-section">
             <h2>Module</h2>
-            <p>Die Module <code>math</code>, <code>strings</code>, <code>collections</code>, <code>random</code> und <code>time</code> sind direkt verfügbar.</p>
+            <p>Die Module <code>math</code>, <code>strings</code>, <code>collections</code>, <code>random</code>, <code>time</code>, <code>types</code> und <code>concurrency</code> sind direkt verfügbar. Mit <code>import ... as ...</code> lässt sich ein Modul unter einem eigenen Namen einbinden, ohne bestehende Variablen zu überschreiben.</p>
             <pre><code>print(math.pi)
 print(math.sqrt(16))
 print(strings.upper("hallo"))
 print(random.int(1, 6))
-import("collections")
-print(collections.stack("a", "b"))</code></pre>
+import math as m
+print(m.sqrt(9))</code></pre>
         </section>
 
         <section id="beispiel" class="tutorial-section">
