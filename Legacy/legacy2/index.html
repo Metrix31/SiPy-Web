@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SiPy Web Editor</title>
+    <link rel="icon" href="favicon.ico" sizes="any">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+<header class="app-header">
+    <div>
+        <h1>SiPy Web Editor</h1>
+    </div>
+
+    <nav class="top-links" aria-label="Projektlinks">
+        <a href="tutorial.html">Tutorial</a>
+        <a href="https://github.com/Metrix31/SiPy-Web" target="_blank" rel="noreferrer">GitHub</a>
+    </nav>
+</header>
+
+<main class="workspace">
+    <section class="panel editor-panel" aria-labelledby="editorTitle">
+        <div class="panel-header">
+            <div>
+                <h2 id="editorTitle">Editor</h2>
+                <p id="editorMeta">5 Zeilen</p>
+            </div>
+
+            <div class="button-row">
+                <button id="runBtn" class="primary-btn" type="button">Run</button>
+                <button id="stepBtn" type="button">Step</button>
+                <button id="resetDebugBtn" type="button">Reset Debug</button>
+                <button id="clearBtn" type="button">Clear</button>
+                <button id="sampleBtn" type="button">Beispiel</button>
+                <button id="copyBtn" type="button">Copy</button>
+            </div>
+        </div>
+
+        <div class="limits-row" aria-label="Laufzeit-Limits">
+            <label for="timeoutInput">Timeout (ms)</label>
+            <input id="timeoutInput" type="number" min="0" step="100" value="1000" inputmode="numeric">
+            <label for="memoryCapInput">Memory-Cap (Variablen)</label>
+            <input id="memoryCapInput" type="number" min="0" step="10" value="200" inputmode="numeric">
+        </div>
+
+        <div id="editor">
+            <div id="lineNumbers" aria-hidden="true">1</div>
+            <textarea id="code" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="SiPy Code">limit := integer(3)
+for i in range(0, limit.value):
+    print(f"Index {i}")
+
+werte = stack()
+werte.push("fertig")
+print(werte.pop())</textarea>
+        </div>
+    </section>
+
+    <section class="panel output-panel" aria-labelledby="outputTitle">
+        <div class="panel-header">
+            <div>
+                <h2 id="outputTitle">Output</h2>
+                <p id="statusText">Bereit</p>
+            </div>
+        </div>
+
+        <div id="output" role="log" aria-live="polite"></div>
+        <div class="inspector">
+            <div class="inspector-title">Memory</div>
+            <div id="memoryInspector">Noch keine Variablen.</div>
+        </div>
+        <div class="inspector">
+            <div class="inspector-title">Variablen-Tracking</div>
+            <div id="trackingInspector">Noch keine Zuweisungen.</div>
+        </div>
+    </section>
+</main>
+
+<script src="sipy.js"></script>
+<script>
+    const codeEl = document.getElementById("code");
+    const runBtn = document.getElementById("runBtn");
+    const stepBtn = document.getElementById("stepBtn");
+    const resetDebugBtn = document.getElementById("resetDebugBtn");
+    const clearBtn = document.getElementById("clearBtn");
+    const sampleBtn = document.getElementById("sampleBtn");
+    const copyBtn = document.getElementById("copyBtn");
+    const statusText = document.getElementById("statusText");
+    const editorMeta = document.getElementById("editorMeta");
+    const lineNumbers = document.getElementById("lineNumbers");
+    const memoryInspector = document.getElementById("memoryInspector");
+    const trackingInspector = document.getElementById("trackingInspector");
+    const timeoutInput = document.getElementById("timeoutInput");
+    const memoryCapInput = document.getElementById("memoryCapInput");
+    const savedCode = localStorage.getItem("sipy-code");
+    const breakpoints = new Set();
+    let debugSession = null;
+    let activeLine = null;
+
+    const sampleCode = `import math as m
+
+generic Box[T]
+interface Named(name)
+Flags = bitfield("Flags", ["Read", "Write"])
+UserType = Box.of("User")
+
+@tracked("demo")
+user = { name: "Ada" }
+limit := cast(4, "integer")
+zahlen = queue()
+
+for i in range(0, limit.value):
+    zahlen.enqueue(i)
+
+farbe = enumType("Farbe", ["Rot", "Gruen", "Blau"])
+paar = tuple("Summe", calc("2 + 3 * 4"))
+einzigartig = set("a", "b", "a")
+rechte = Flags.value("Read", "Write")
+
+match zahlen.size():
+    case 4:
+        print(f"Queue hat {zahlen.size()} Werte")
+        break
+    default:
+        print("Andere Groesse")
+
+try:
+    print(f"Enum: {farbe.Rot}")
+    print(f"Interface passt: {implementsInterface(user, Named)}")
+    print(f"Generic: {UserType}")
+    print(rechte)
+    print(paar)
+    print(einzigartig)
+    await time.sleep(10)
+    print(f"Wurzel: {m.sqrt(16)}")
+except error:
+    print(f"Fehler gefangen: {error.message}")`;
+
+    function escapeHtml(text) {
+        return String(text)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#39;");
+    }
+
+    function readLimitOptions() {
+        const timeoutMs = Number(timeoutInput.value);
+        const memoryCap = Number(memoryCapInput.value);
+        return {
+            timeoutMs: Number.isFinite(timeoutMs) && timeoutMs >= 0 ? timeoutMs : 1000,
+            memoryCap: Number.isFinite(memoryCap) && memoryCap >= 0 ? memoryCap : 200
+        };
+    }
+
+    function updateEditorMeta() {
+        const lineCount = codeEl.value.split("\n").length;
+        editorMeta.textContent = lineCount + (lineCount === 1 ? " Zeile" : " Zeilen");
+        lineNumbers.innerHTML = Array.from({ length: lineCount }, (_, index) => {
+            const line = index + 1;
+            const classes = [
+                breakpoints.has(line) ? "has-breakpoint" : "",
+                activeLine === line ? "active-line" : ""
+            ].filter(Boolean).join(" ");
+            return `<button class="${classes}" type="button" data-line="${line}" title="Breakpoint umschalten">${line}</button>`;
+        }).join("");
+        localStorage.setItem("sipy-code", codeEl.value);
+    }
+
+    function setStatus(text, mode = "") {
+        statusText.textContent = text;
+        statusText.dataset.mode = mode;
+    }
+
+    function renderMemory(memory = []) {
+        if (!memory.length) {
+            memoryInspector.textContent = "Noch keine Variablen.";
+            return;
+        }
+
+        memoryInspector.innerHTML = memory.map((item) => {
+            const lock = item.constant ? " const" : "";
+            return `<div><strong>${escapeHtml(item.name)}</strong><span>${escapeHtml(item.value)}${escapeHtml(lock)}</span></div>`;
+        }).join("");
+    }
+
+    function renderTracking(debugInfo) {
+        const writes = debugInfo && debugInfo.variableWrites ? debugInfo.variableWrites : [];
+        if (!writes.length) {
+            trackingInspector.textContent = "Noch keine Zuweisungen.";
+            return;
+        }
+
+        trackingInspector.innerHTML = writes.map((entry) => {
+            return `<div><strong>${escapeHtml(entry.name)}</strong><span>Zeile ${escapeHtml(entry.line)}</span></div>`;
+        }).join("");
+    }
+
+    function renderWarnings(warnings = []) {
+        warnings.forEach((warning) => writeln("Warnung: " + warning));
+    }
+
+    function resetDebugState() {
+        debugSession = null;
+        activeLine = null;
+        renderMemory();
+        renderTracking();
+        updateEditorMeta();
+    }
+
+    async function runCode() {
+        clearOutput();
+        resetDebugState();
+        setStatus("Läuft...", "running");
+
+        try {
+            const result = await runSiPy(codeEl.value, { breakpoints, ...readLimitOptions() });
+            renderWarnings(result.warnings);
+            renderMemory(result.memory);
+            renderTracking(result.debug);
+            if (result.paused) {
+                activeLine = result.line;
+                setStatus("Breakpoint in Zeile " + result.line, "running");
+            } else {
+                setStatus(result.executedLines + " Statements ausgeführt", "ok");
+            }
+            updateEditorMeta();
+        } catch (e) {
+            writeln("Fehler: " + e.message);
+            setStatus("Fehler", "error");
+        }
+    }
+
+    async function stepCode() {
+        if (!debugSession) {
+            clearOutput();
+            try {
+                debugSession = createDebugSession(codeEl.value, breakpoints, readLimitOptions());
+            } catch (e) {
+                writeln("Fehler: " + e.message);
+                setStatus("Fehler", "error");
+                return;
+            }
+        }
+
+        try {
+            const next = debugSession.bytecode[debugSession.index];
+            activeLine = next ? next.line : null;
+            const result = await stepDebugSession(debugSession);
+            renderWarnings(result.warnings);
+            renderMemory(result.memory);
+            renderTracking(result.debug);
+            setStatus(result.done ? "Debug fertig" : "Pause nach Zeile " + activeLine, result.done ? "ok" : "running");
+            updateEditorMeta();
+        } catch (e) {
+            writeln("Fehler: " + e.message);
+            setStatus("Fehler", "error");
+        }
+    }
+
+    runBtn.onclick = runCode;
+    stepBtn.onclick = stepCode;
+    resetDebugBtn.onclick = () => {
+        resetDebugState();
+        setStatus("Debug zurückgesetzt");
+    };
+    clearBtn.onclick = () => {
+        clearOutput();
+        renderMemory();
+        renderTracking();
+        setStatus("Bereit");
+    };
+
+    sampleBtn.onclick = () => {
+        codeEl.value = sampleCode;
+        resetDebugState();
+        codeEl.focus();
+    };
+
+    copyBtn.onclick = async () => {
+        try {
+            await navigator.clipboard.writeText(codeEl.value);
+            setStatus("Code kopiert", "ok");
+        } catch (error) {
+            codeEl.select();
+            document.execCommand("copy");
+            setStatus("Code kopiert", "ok");
+        }
+    };
+
+    codeEl.addEventListener("input", () => {
+        codeEl.value = codeEl.value
+            .replace(/„|“|”/g, '"')
+            .replace(/‚|‘|’/g, "'");
+        resetDebugState();
+    });
+    codeEl.addEventListener("scroll", () => {
+        lineNumbers.scrollTop = codeEl.scrollTop;
+    });
+    codeEl.addEventListener("keydown", (event) => {
+        if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+            event.preventDefault();
+            runCode();
+        }
+
+        if (event.key === "Tab") {
+            event.preventDefault();
+            const start = codeEl.selectionStart;
+            const end = codeEl.selectionEnd;
+            codeEl.value = codeEl.value.substring(0, start) + "    " + codeEl.value.substring(end);
+            codeEl.selectionStart = codeEl.selectionEnd = start + 4;
+            updateEditorMeta();
+        }
+    });
+    lineNumbers.addEventListener("click", (event) => {
+        const button = event.target.closest("button[data-line]");
+        if (!button) return;
+        const line = Number(button.dataset.line);
+        if (breakpoints.has(line)) breakpoints.delete(line);
+        else breakpoints.add(line);
+        updateEditorMeta();
+    });
+
+    if (savedCode) {
+        codeEl.value = savedCode;
+    }
+
+    updateEditorMeta();
+</script>
+</body>
+</html>
