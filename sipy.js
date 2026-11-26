@@ -1,3 +1,7 @@
+const scheduleDelay = typeof setTimeout === "function"
+    ? setTimeout
+    : (callback) => callback();
+
 class Basic {
     constructor(value) {
         this.value = value;
@@ -329,7 +333,7 @@ const modules = {
         attr
     },
     concurrency: {
-        sleep: (ms) => new Promise((resolve) => setTimeout(resolve, Basic.toBasic(ms).value)),
+        sleep: (ms) => new Promise((resolve) => scheduleDelay(resolve, Basic.toBasic(ms).value)),
         coroutine,
         generator,
         lazy,
@@ -345,7 +349,7 @@ const modules = {
     },
     time: {
         now: () => new Date().toLocaleString(),
-        sleep: (ms) => new Promise((resolve) => setTimeout(resolve, Basic.toBasic(ms).value))
+        sleep: (ms) => new Promise((resolve) => scheduleDelay(resolve, Basic.toBasic(ms).value))
     }
 };
 
