@@ -9,18 +9,31 @@
 </head>
 
 <body>
-<header class="app-header">
-    <div>
-        <h1>SiPy Web Editor</h1>
+<a class="skip-link" href="#main">Skip to editor</a>
+<header class="header">
+    <div class="container header-inner">
+        <a href="index.html" class="logo" aria-label="SiPy Web Editor, back to top">
+            <span class="logo-mark">S</span>
+            <span>SiPy Web Editor</span>
+        </a>
+        <nav class="navigation" aria-label="Project links">
+            <a href="tutorial.html">Tutorial</a>
+            <a href="https://github.com/Metrix31/SiPy-Web" target="_blank" rel="noreferrer">GitHub</a>
+        </nav>
     </div>
-
-    <nav class="top-links" aria-label="Projektlinks">
-        <a href="tutorial.html">Tutorial</a>
-        <a href="https://github.com/Metrix31/SiPy-Web" target="_blank" rel="noreferrer">GitHub</a>
-    </nav>
 </header>
 
-<main class="workspace">
+<main id="main">
+<section class="editor-section">
+    <div class="container editor-layout">
+        <header class="editor-intro">
+            <div>
+            <p class="section-kicker">Browser runtime</p>
+            <h1>SiPy Web Editor</h1>
+            </div>
+            <p>Write, run and inspect small programs directly in your browser.</p>
+        </header>
+        <div class="workspace">
     <section class="panel editor-panel" aria-labelledby="editorTitle">
         <div class="panel-header">
             <div>
@@ -75,7 +88,21 @@ print(werte.pop())</textarea>
             <div id="trackingInspector">Noch keine Zuweisungen.</div>
         </div>
     </section>
+        </div>
+    </div>
+</section>
 </main>
+
+<footer class="footer">
+    <div class="container footer-inner">
+        <div class="footer-brand">SiPy Web Editor</div>
+        <div class="footer-links">
+            <a href="tutorial.html">Tutorial</a>
+            <a href="https://github.com/Metrix31/SiPy-Web" target="_blank" rel="noreferrer">GitHub</a>
+        </div>
+        <div class="footer-copy">Open-source browser runtime</div>
+    </div>
+</footer>
 
 <script src="sipy.js"></script>
 <script>
