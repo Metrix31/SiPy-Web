@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SiPy Tutorial</title>
+    <link rel="icon" href="favicon.ico" sizes="any">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body class="tutorial-page">
+<header class="app-header">
+    <div>
+        <p class="eyebrow">SiPy Tutorial</p>
+        <h1>Die wichtigsten Befehle</h1>
+    </div>
+
+    <nav class="top-links" aria-label="Navigation">
+        <a href="index.html">Zurück zum Editor</a>
+        <a href="https://github.com/Metrix31/SiPy-Web" target="_blank" rel="noreferrer">GitHub</a>
+    </nav>
+</header>
+
+<main class="tutorial-layout">
+    <nav class="tutorial-nav" aria-label="Tutorial Abschnitte">
+        <a href="#start">Start</a>
+        <a href="#typen">Typen</a>
+        <a href="#ausgabe">Ausgabe</a>
+        <a href="#kontrolle">Kontrolle</a>
+        <a href="#collections">Collections</a>
+        <a href="#erweitert">Erweiterte Typen</a>
+        <a href="#debugging">Debugging</a>
+        <a href="#module">Module</a>
+        <a href="#beispiel">Beispiel</a>
+    </nav>
+
+    <div class="tutorial-content">
+        <section id="start" class="tutorial-section">
+            <h2>Was ist SiPy?</h2>
+            <p>
+                SiPy ist eine einfache Programmiersprache für kleine Programme direkt im Browser.
+                Der Editor kompiliert Code in schnelle Statements, führt sie aus und zeigt Output, Warnungen und Speicherzustand an.
+            </p>
+        </section>
+
+        <section id="typen" class="tutorial-section">
+            <h2>Variablen, Konstanten und Kommentare</h2>
+            <p>Normale Variablen werden mit <code>=</code> gespeichert. <code>:=</code> schützt Werte vor späterer Neuzuweisung.</p>
+            <pre><code>/* mehrzeiliger
+Kommentar */
+name := string("SiPy")
+version = floater(2.0)
+aktiv = boolean(True)
+print(name)</code></pre>
+        </section>
+
+        <section id="ausgabe" class="tutorial-section">
+            <h2>Strings und Inline-Math</h2>
+            <p>Strings können Python-nahe f-Strings nutzen. <code>calc()</code> berechnet kurze Rechenausdrücke.</p>
+            <pre><code>a = integer(10)
+b = integer(5)
+print(f"Summe: {a.add(b)}")
+print(calc("2 + 3 * 4"))
+print(f"Name: {name}")</code></pre>
+        </section>
+
+        <section id="kontrolle" class="tutorial-section">
+            <h2>For, Switch und Try/Catch</h2>
+            <p>Blöcke werden wie in Python mit Doppelpunkt und Einrückung geschrieben. <code>for in range()</code>, <code>match/case</code> und <code>try/except</code> sind eingebaut.</p>
+            <pre><code>for i in range(0, 3):
+    print(f"Index {i}")
+
+match integer(2).value:
+    case 1:
+        print("eins")
+        break
+    case 2:
+        print("zwei")
+        break
+    default:
+        print("anderer Wert")
+
+try:
+    x := integer(1)
+    x = integer(2)
+except error:
+    print(f"Gefangen: {error.message}")</code></pre>
+            <p>Ein <code>break</code> innerhalb einer verschachtelten Schleife oder eines <code>if</code>/<code>elif</code> beendet nur diese Schleife bzw. Bedingung — nicht automatisch den umgebenden <code>case</code>-Block. Der Rest des <code>case</code>-Codes danach wird ganz normal weiter ausgeführt.</p>
+        </section>
+
+        <section id="collections" class="tutorial-section">
+            <h2>Tuple, Set, Queue, Stack und Enum</h2>
+            <p>SiPy enthält unveränderliche Tupel, eindeutige Sets, FIFO-Queues, LIFO-Stacks und einfache Enums.</p>
+            <pre><code>paar = tuple("x", 10)
+werte = set("a", "b", "a")
+aufgaben = queue()
+stapel = stack()
+Status = enumType("Status", ["Offen", "Fertig"])
+
+aufgaben.enqueue("bauen")
+stapel.push("oben")
+print(paar)
+print(werte)
+print(aufgaben.dequeue())
+print(stapel.pop())
+print(Status.Fertig)</code></pre>
+        </section>
+
+        <section id="erweitert" class="tutorial-section">
+            <h2>Generics, Interfaces, Bitfields und mehr</h2>
+            <p>Für größere Programme bietet SiPy generische Typen, Interfaces, Bitfields, Casts, statische Klassen und Attribute-Annotationen.</p>
+            <pre><code>generic Box[T]
+interface Named(name)
+Flags = bitfield("Flags", ["Read", "Write"])
+UserType = Box.of("User")
+
+@tracked("demo")
+user = { name: "Ada" }
+
+limit := cast(4, "integer")
+rechte = Flags.value("Read", "Write")
+
+print(implementsInterface(user, Named))
+print(UserType)
+print(rechte)</code></pre>
+            <p>Asynchrone Abläufe und Coroutinen laufen über <code>await</code> und das <code>concurrency</code>-Modul:</p>
+            <pre><code>import concurrency as go
+await go.sleep(200)
+print("fertig gewartet")</code></pre>
+        </section>
+
+        <section id="debugging" class="tutorial-section">
+            <h2>Debugging</h2>
+            <p>Klicke links auf eine Zeilennummer, um einen Breakpoint zu setzen. <code>Step</code> führt ein Statement aus und der Memory-Inspector zeigt Variablen an.</p>
+            <pre><code>a = integer(1)
+breakpoint()
+a = a.add(2)
+print(a)</code></pre>
+            <p>
+                Oberhalb des Editors lassen sich <strong>Timeout</strong> (in Millisekunden) und <strong>Memory-Cap</strong>
+                (maximale Anzahl gleichzeitiger Variablen) konfigurieren. Beim schrittweisen Debuggen zählt der Timeout nur
+                die tatsächliche Ausführungszeit eines Schritts — Pausen zwischen Klicks auf <code>Step</code> lösen keinen
+                Timeout-Fehler mehr aus.
+            </p>
+            <p>
+                Unter dem Memory-Inspector zeigt <strong>Variablen-Tracking</strong> jede Zuweisung aus dem Quellcode mit
+                Zeilennummer an, damit nachvollziehbar bleibt, wo eine Variable gesetzt wurde.
+            </p>
+        </section>
+
+        <section id="module" class="tutorial-section">
+            <h2>Module</h2>
+            <p>Die Module <code>math</code>, <code>strings</code>, <code>collections</code>, <code>random</code>, <code>time</code>, <code>types</code> und <code>concurrency</code> sind direkt verfügbar. Mit <code>import ... as ...</code> lässt sich ein Modul unter einem eigenen Namen einbinden, ohne bestehende Variablen zu überschreiben.</p>
+            <pre><code>print(math.pi)
+print(math.sqrt(16))
+print(strings.upper("hallo"))
+print(random.int(1, 6))
+import math as m
+print(m.sqrt(9))</code></pre>
+        </section>
+
+        <section id="beispiel" class="tutorial-section">
+            <h2>Komplettes Beispiel</h2>
+            <p>Dieses Beispiel nutzt Konstanten, For-Loop, Queue, Switch, String-Interpolation und Fehlerbehandlung.</p>
+            <pre><code>limit := integer(3)
+jobs = queue()
+
+for i in range(0, limit.value):
+    jobs.enqueue(f"Job {i}")
+
+try:
+    match jobs.size():
+        case 3:
+            print(f"Bereit: {jobs.size()} Jobs")
+            break
+        default:
+            print("Andere Anzahl")
+except error:
+    print(f"Fehler: {error.message}")</code></pre>
+        </section>
+    </div>
+</main>
+</body>
+</html>
