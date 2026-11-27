@@ -16,6 +16,7 @@
         <span class="logo-mark">S</span>
         <span>SiPy Web Editor</span>
     </a>
+    <button type="button" id="language-toggle" class="language-toggle" aria-label="Switch language">English</button>
     <nav class="navigation" aria-label="Navigation">
         <a href="index.html">Zurück zum Editor</a>
         <a href="https://github.com/Metrix31/SiPy-Web" target="_blank" rel="noreferrer">GitHub</a>
@@ -182,5 +183,68 @@ except error:
         </section>
     </div>
 </main>
+<script>
+(() => {
+  const translations = {
+    de: {
+      skip: 'Zum Tutorial springen', navAria: 'Navigation', back: 'Zurück zum Editor', sectionsAria: 'Tutorial-Abschnitte',
+      sections: ['Start', 'Typen', 'Ausgabe', 'Kontrolle', 'Collections', 'Erweiterte Typen', 'Debugging', 'Module', 'Beispiel'],
+      headings: ['Was ist SiPy?', 'Variablen, Konstanten und Kommentare', 'Strings und Inline-Math', 'For, Switch und Try/Catch', 'Tuple, Set, Queue, Stack und Enum', 'Generics, Interfaces, Bitfields und mehr', 'Debugging', 'Module', 'Komplettes Beispiel'],
+      paragraphs: [
+        'SiPy ist eine einfache Programmiersprache für kleine Programme direkt im Browser. Der Editor kompiliert Code in schnelle Statements, führt sie aus und zeigt Output, Warnungen und Speicherzustand an.',
+        'Normale Variablen werden mit = gespeichert. := schützt Werte vor späterer Neuzuweisung.',
+        'Strings können Python-nahe f-Strings nutzen. calc() berechnet kurze Rechenausdrücke.',
+        'Blöcke werden wie in Python mit Doppelpunkt und Einrückung geschrieben. for in range(), match/case und try/except sind eingebaut.',
+        'SiPy enthält unveränderliche Tupel, eindeutige Sets, FIFO-Queues, LIFO-Stacks und einfache Enums.',
+        'Für größere Programme bietet SiPy generische Typen, Interfaces, Bitfields, Casts, statische Klassen und Attribute-Annotationen.',
+        'Klicke links auf eine Zeilennummer, um einen Breakpoint zu setzen. Step führt ein Statement aus und der Memory-Inspector zeigt Variablen an.',
+        'Die Module math, strings, collections, random, time, types und concurrency sind direkt verfügbar. Mit import ... as ... lässt sich ein Modul unter einem eigenen Namen einbinden, ohne bestehende Variablen zu überschreiben.',
+        'Dieses Beispiel nutzt Konstanten, For-Loop, Queue, Switch, String-Interpolation und Fehlerbehandlung.'
+      ],
+      debugExtra: ['Oberhalb des Editors lassen sich Timeout (in Millisekunden) und Memory-Cap (maximale Anzahl gleichzeitiger Variablen) konfigurieren. Beim schrittweisen Debuggen zählt der Timeout nur die tatsächliche Ausführungszeit eines Schritts — Pausen zwischen Klicks auf Step lösen keinen Timeout-Fehler mehr aus.', 'Unter dem Memory-Inspector zeigt Variablen-Tracking jede Zuweisung aus dem Quellcode mit Zeilennummer an, damit nachvollziehbar bleibt, wo eine Variable gesetzt wurde.']
+    },
+    en: {
+      skip: 'Skip to tutorial', navAria: 'Navigation', back: 'Back to editor', sectionsAria: 'Tutorial sections',
+      sections: ['Start', 'Types', 'Output', 'Control flow', 'Collections', 'Advanced types', 'Debugging', 'Modules', 'Example'],
+      headings: ['What is SiPy?', 'Variables, constants and comments', 'Strings and inline math', 'For, Switch and Try/Catch', 'Tuple, Set, Queue, Stack and Enum', 'Generics, interfaces, bitfields and more', 'Debugging', 'Modules', 'Complete example'],
+      paragraphs: [
+        'SiPy is a simple programming language for small programs directly in your browser. The editor compiles code into fast statements, executes them, and displays output, warnings and memory state.',
+        'Regular variables are assigned using =. := protects values from being reassigned later.',
+        'Strings can use Python-like f-strings. calc() evaluates short arithmetic expressions.',
+        'Blocks use colons and indentation, like Python. for in range(), match/case and try/except are built in.',
+        'SiPy includes immutable tuples, unique sets, FIFO queues, LIFO stacks and simple enums.',
+        'For larger programs, SiPy offers generic types, interfaces, bitfields, casts, static classes and attribute annotations.',
+        'Click a line number on the left to set a breakpoint. Step executes a statement, and the memory inspector displays variables.',
+        'The math, strings, collections, random, time, types and concurrency modules are available directly. Use import ... as ... to import a module under a custom name without overwriting existing variables.',
+        'This example uses constants, a for loop, a queue, switch, string interpolation and error handling.'
+      ],
+      debugExtra: ['Above the editor, you can configure Timeout (in milliseconds) and Memory Cap (the maximum number of simultaneous variables). During step-by-step debugging, the timeout only measures the actual execution time of a step — pauses between clicks on Step no longer trigger timeout errors.', 'Below the memory inspector, Variable Tracking displays every assignment from the source code with its line number, making it easier to see where a variable was set.']
+    }
+  };
+  const toggle = document.getElementById('language-toggle');
+  let lang = localStorage.getItem('sipy-tutorial-lang') || 'de';
+  function applyLanguage(next) {
+    lang = next; const t = translations[lang]; document.documentElement.lang = lang;
+    document.querySelector('.skip-link').textContent = t.skip;
+    document.querySelector('.navigation').setAttribute('aria-label', t.navAria);
+    document.querySelector('.navigation a[href="index.html"]').textContent = t.back;
+    document.querySelector('.tutorial-nav').setAttribute('aria-label', t.sectionsAria);
+    document.querySelectorAll('.tutorial-nav a').forEach((a,i)=>a.textContent=t.sections[i]);
+    document.querySelectorAll('.tutorial-section h2').forEach((h,i)=>h.textContent=t.headings[i]);
+    const sectionIds = ['start','typen','ausgabe','kontrolle','collections','erweitert','debugging','module','beispiel'];
+    sectionIds.forEach((id,idx)=> { const first=document.querySelector('#'+id+' > p'); if(first) first.textContent=t.paragraphs[idx]; });
+    const debugSection = document.querySelector('#debugging');
+    const debugPs = debugSection.querySelectorAll('p');
+    debugPs[1].textContent=t.debugExtra[0]; debugPs[2].textContent=t.debugExtra[1];
+    const advanced = document.querySelector('#erweitert p');
+    advanced.textContent = lang==='de' ? 'Asynchrone Abläufe und Coroutinen laufen über await und das concurrency-Modul:' : 'Asynchronous operations and coroutines use await and the concurrency module:';
+    toggle.textContent = lang==='de' ? 'English' : 'Deutsch';
+    toggle.setAttribute('aria-label', lang==='de' ? 'Switch to English' : 'Zu Deutsch wechseln');
+    localStorage.setItem('sipy-tutorial-lang', lang);
+  }
+  toggle.addEventListener('click',()=>applyLanguage(lang==='de'?'en':'de'));
+  applyLanguage(lang);
+})();
+</script>
 </body>
 </html>

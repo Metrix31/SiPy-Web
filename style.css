@@ -120,3 +120,20 @@ code { color: var(--aurora); font-family: var(--mono); }
 @media (max-width: 800px) { .editor-section { padding: 40px 0 64px; } .editor-intro { align-items: start; flex-direction: column; gap: 16px; } .workspace { grid-template-columns: 1fr; } .output-panel { min-height: 460px; } .tutorial-layout { grid-template-columns: 1fr; gap: 35px; padding: 72px 0 96px; } .tutorial-nav { position: static; grid-template-columns: repeat(3, 1fr); } }
 @media (max-width: 620px) { :root { --gutter: 32px; } .header-inner { height: 64px; } .navigation { gap: 18px; } .navigation a:nth-child(2) { display: none; } .navigation .button { min-height: 34px; padding: 0 12px; } .panel-header { align-items: flex-start; flex-direction: column; } .button-row { justify-content: flex-start; } #editor { height: 56vh; min-height: 370px; } .limits-row { align-items: flex-start; flex-direction: column; } .footer-inner { grid-template-columns: 1fr auto; gap: 12px; padding: 20px 0; } .footer-copy { grid-column: 1 / -1; text-align: left; } .tutorial-nav { grid-template-columns: 1fr 1fr; } .tutorial-section { padding: 24px 20px; } }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { transition: none !important; } }
+
+/* Tutorial page compatibility and language switch */
+.tutorial-page .header { border-bottom: 1px solid var(--line); background: rgba(0, 4, 18, .9); }
+.tutorial-page .header-inner { gap: 20px; }
+.tutorial-page .navigation { margin-left: auto; }
+.language-toggle { flex: 0 0 auto; min-height: 34px; border: 1px solid var(--line-strong); border-radius: 8px; padding: 0 12px; background: rgba(232, 238, 242, .045); color: var(--ice); font: 600 13px/1 var(--font); cursor: pointer; transition: background .18s ease, border-color .18s ease, color .18s ease; }
+.language-toggle:hover { border-color: var(--aurora); background: rgba(43, 240, 138, .09); color: var(--ice); }
+.tutorial-page .tutorial-layout { align-items: start; }
+.tutorial-page .tutorial-section { min-width: 0; }
+.tutorial-page pre code { color: inherit; }
+@media (max-width: 620px) {
+    .tutorial-page .header-inner { gap: 10px; }
+    .tutorial-page .logo { gap: 8px; font-size: 13px; }
+    .tutorial-page .language-toggle { padding: 0 9px; font-size: 12px; }
+    .tutorial-page .navigation { gap: 12px; }
+    .tutorial-page .navigation a:first-child { font-size: 12px; }
+}
